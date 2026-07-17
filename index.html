@@ -1525,7 +1525,33 @@
       </div>
       <div class="exact-sum" id="exactSum">先付合計 NT$ 0｜支出合計 NT$ 0</div>
     </div>
+    <div class="field"><label>或：選擇誰要均分支出，一鍵填入</label>
+      <div class="chips" id="eqChips">${members.map(m => `<div class="chip on" data-id="${m.id}" onclick="this.classList.toggle('on')">${m.name}</div>`).join('')}</div>
+      <div style="height:8px"></div>
+      <button class="btn gray" onclick="fillEqualSpend()">⚖️ 把先付合計均分到支出</button>
+    </div>
     <div class="field">${keypadHTML(false)}</div>`;
+    }
+    // 特定分帳：把先付合計均分到選取成員的支出格（整數，餘數由前面的人多攤 1 元）
+    function fillEqualSpend() {
+      const { tp } = exactTotals();
+      if (tp <= 0) { toast('請先填先付金額'); return; }
+      const sel = [...document.querySelectorAll('#eqChips .chip.on')].map(c => +c.dataset.id);
+      if (!sel.length) { toast('至少選一位'); return; }
+      members.forEach(m => { cellStr['spend_' + m.id] = ''; });
+      const base = Math.floor(tp / sel.length);
+      let rem = Math.round(tp - base * sel.length);
+      sel.forEach((id, i) => { cellStr['spend_' + id] = String(base + (i < rem ? 1 : 0)); });
+      members.forEach(m => {
+        const el = document.getElementById('cell_spend_' + m.id);
+        if (el) {
+          const v = cellStr['spend_' + m.id] || '';
+          el.textContent = v || '0';
+          el.classList.toggle('zero', !v);
+        }
+      });
+      updateExactSum();
+      toast('已均分支出 ✓');
     }
     function equalFormHTML() {
       cellStr = {}; activeKey = null;
