@@ -1333,6 +1333,21 @@
       if (!n) { try { n = localStorage.getItem('chatName') || ''; } catch (e) { } }
       return n;
     }
+    // 第一次進入專案時，詢問要在此專案顯示的名稱（預設＝帳號的使用者名稱）
+    function ensureProjNick() {
+      const p = proj();
+      if (p.type === 'personal') return;
+      let existing = '';
+      try { existing = localStorage.getItem('nick_' + projKey()) || ''; } catch (e) { }
+      if (existing) return;
+      const def = (authUser && authUser.nickname) || chatName() || '';
+      const n = prompt(`你在「${p.name}」要顯示的名稱？（留言時使用，之後可在留言區改）`, def);
+      const val = (n && n.trim()) || def;
+      if (val) {
+        try { localStorage.setItem('nick_' + projKey(), val); } catch (e) { }
+        render();
+      }
+    }
     function chatHTML() {
       const chats = proj().chats || [];
       let html = `<div class="section-title">💬 留言區</div><div class="card chat-card">`;
@@ -1714,6 +1729,7 @@
       data.currentProjectId = id; save(); closeSheet();
       switchTab(currentPage);
       toast(`已切換到「${proj().name}」`);
+      ensureProjNick();
     }
     function addProject() {
       const name = document.getElementById('inProject').value.trim();
@@ -1724,7 +1740,7 @@
       data.currentProjectId = p.id;
       save(); closeSheet();
       if (newProjType === 'personal') { toast(`已建立「${name}」`); switchTab('expenses'); }
-      else { toast(`已建立「${name}」，先去新增成員吧`); switchTab('members'); }
+      else { toast(`已建立「${name}」，先去新增成員吧`); switchTab('members'); ensureProjNick(); }
     }
     function renameProject(id) {
       const p = data.projects.find(x => x.id === id);
@@ -1818,6 +1834,7 @@
       data.currentProjectId = p.id;
       save(); closeSheet(); switchTab('expenses');
       toast(`已加入「${p.name}」`);
+      ensureProjNick();
     }
     async function joinByCode() {
       const code = document.getElementById('inJoin').value.trim().toUpperCase();
@@ -1881,6 +1898,35 @@
       const el = document.getElementById('userPill');
       if (el) el.textContent = authUser ? `👤 ${authUser.nickname}` : '👤 登入';
       if (currentPage === 'expenses') render(); // 更新留言區的身分顯示
+      if (authUser) syncMyProjects(); // 登入後自動抓回我是成員的所有專案
+    }
+    // 把帳號在雲端的所有專案抓回本機清單（換裝置登入也看得到）
+    let syncingMine = false;
+    async function syncMyProjects() {
+      if (!cloudOn() || !authUser || syncingMine) return;
+      syncingMine = true;
+      try {
+        const { data: mems } = await sb.from('project_members')
+          .select('project_id').eq('user_id', authUser.id);
+        if (!mems || !mems.length) return;
+        const ids = mems.map(m => m.project_id);
+        const { data: rows } = await sb.from('shared_projects').select('*').in('id', ids);
+        let added = 0;
+        (rows || []).forEach(row => {
+          if (!data.projects.some(p => p.cloud && p.cloud.code === row.code)) {
+            const p = row.data;
+            p.id = data.nextProjectId++;
+            p.cloud = { code: row.code, ts: row.updated_at };
+            data.projects.push(p);
+            added++;
+          }
+        });
+        if (added) {
+          try { localStorage.setItem('splitapp', JSON.stringify(data)); } catch (e) { }
+          render();
+          toast(`☁ 已同步 ${added} 個專案`);
+        }
+      } finally { syncingMine = false; }
     }
     async function initAuth() {
       try {
@@ -1900,6 +1946,8 @@
             <div class="grow"><div class="title">${esc(authUser.nickname)}</div>
               <div class="detail">${esc(authUser.email)}</div></div>
           </div></div>
+          <button class="btn gray" onclick="changeNick()">✎ 修改使用者名稱</button>
+          <div style="height:10px"></div>
           <button class="btn gray" onclick="doLogout()">登出</button>`;
       } else {
         document.getElementById('sheetTitle').textContent = '登入／註冊';
@@ -1933,6 +1981,14 @@
       if (error) { toast('註冊失敗：' + error.message); return; }
       if (d && d.user && !d.session) { closeSheet(); toast('請到信箱點確認信後再登入'); return; }
       closeSheet(); toast(`註冊成功，嗨 ${nickname}！`);
+    }
+    async function changeNick() {
+      const n = prompt('新的使用者名稱（各專案未另外自訂時的預設名稱）', authUser ? authUser.nickname : '');
+      if (!n || !n.trim()) return;
+      const { data: d, error } = await sb.auth.updateUser({ data: { nickname: n.trim() } });
+      if (error) { toast('修改失敗：' + error.message); return; }
+      if (d && d.user) setAuthUser(d.user);
+      closeSheet(); toast(`使用者名稱已改為 ${n.trim()}`);
     }
     async function doLogout() {
       try { await sb.auth.signOut(); } catch (e) { }
