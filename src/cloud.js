@@ -29,12 +29,17 @@ function genCode() {
 function projPayload(p) { const { cloud, ...rest } = p; return rest; }
 
 
+const lastPushed = {}; // code -> last successfully pushed JSON (skip identical pushes)
 async function pushProject(p) {
   if (!cloudOn() || !p.cloud) return;
+  const payload = projPayload(p);
+  const body = JSON.stringify(payload);
+  if (lastPushed[p.cloud.code] === body) return; // unchanged since last push, skip
   const { data: row, error } = await sb.from('shared_projects')
-    .update({ name: p.name, data: projPayload(p) })
+    .update({ name: p.name, data: payload })
     .eq('code', p.cloud.code).select().single();
-  if (!error && row) p.cloud.ts = row.updated_at;
+  if (error) { hooks.toast('☁ 同步失敗，稍後會自動重試'); return; }
+  if (row) { p.cloud.ts = row.updated_at; lastPushed[p.cloud.code] = body; }
 }
 let pushTimer = null;
 function schedulePush() {
@@ -55,13 +60,18 @@ function isAdmin() {
 let pulling = false;
 async function pullAll() {
   if (!cloudOn() || pulling) return;
+  if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return; // skip polling in background tabs
   pulling = true;
   try {
     for (const p of data.projects.filter(x => x.cloud)) {
+      // Lightweight check first (tens of bytes); fetch full payload only when changed
+      const { data: meta } = await sb.from('shared_projects').select('updated_at').eq('code', p.cloud.code).single();
+      if (!meta || meta.updated_at === p.cloud.ts) continue;
       const { data: row } = await sb.from('shared_projects').select('*').eq('code', p.cloud.code).single();
       if (row && row.updated_at !== p.cloud.ts) {
         const keepId = p.id;
         Object.assign(p, row.data, { id: keepId, cloud: { code: p.cloud.code, ts: row.updated_at } });
+        lastPushed[p.cloud.code] = JSON.stringify(projPayload(p)); // avoid echoing pulled data back
         try { localStorage.setItem('splitapp', JSON.stringify(data)); } catch (e) { }
         if (proj().id === keepId) { hooks.render(); hooks.toast('☁ 已同步最新資料'); }
       }

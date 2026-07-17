@@ -1,0 +1,24 @@
+name: Supabase Keep-Alive
+
+# Free-tier Supabase projects pause after 7 days of inactivity.
+# Ping the REST endpoint every 3 days so the project stays awake.
+# Requires repo secret SUPABASE_KEY (Publishable key, sb_publishable_...).
+on:
+  schedule:
+    - cron: '0 0 */3 * *'   # every 3 days at 00:00 UTC
+  workflow_dispatch:         # allow manual trigger
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST API
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://bklyaejmluevxqufbkma.supabase.co/rest/v1/shared_projects?select=updated_at&limit=1" \
+            -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY }}")
+          echo "HTTP $code"
+          # 200 (data) or 401/403 (blocked by RLS) both count as activity;
+          # fail only on network errors / 5xx
+          if [ "$code" -ge 500 ] || [ "$code" -eq 000 ]; then exit 1; fi

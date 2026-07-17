@@ -66,8 +66,11 @@ ui.render();
 
 // 5) 雲端同步與登入
 if (cloud.cloudOn()) {
-  setInterval(cloud.pullAll, 8000);            // 每 8 秒拉一次
-  window.addEventListener('focus', cloud.pullAll); // 切回視窗立即同步
+  setInterval(cloud.pullAll, 20000);           // poll every 20s (pullAll skips when tab is hidden)
+  window.addEventListener('focus', cloud.pullAll); // sync immediately on window focus
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') cloud.pullAll(); // resume instantly when tab becomes visible
+  });
   cloud.pullAll();
   cloud.initAuth();
 }
