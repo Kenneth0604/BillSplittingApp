@@ -269,16 +269,21 @@ drop policy if exists "anon read"   on public.shared_projects;
 drop policy if exists "anon insert" on public.shared_projects;
 drop policy if exists "anon update" on public.shared_projects;
 
+drop policy if exists "members or admin read" on public.shared_projects;
 create policy "members or admin read" on public.shared_projects
   for select using (public.is_member(id) or public.is_admin());
+drop policy if exists "logged-in create" on public.shared_projects;
 create policy "logged-in create" on public.shared_projects
   for insert with check (auth.uid() is not null and owner = auth.uid());
+drop policy if exists "members or admin update" on public.shared_projects;
 create policy "members or admin update" on public.shared_projects
   for update using (public.is_member(id) or public.is_admin());
+drop policy if exists "owner or admin delete" on public.shared_projects;
 create policy "owner or admin delete" on public.shared_projects
   for delete using (owner = auth.uid() or public.is_admin());
 
 -- 8) 成員表：只能看到自己的成員資格（管理員全看）
+drop policy if exists "read own memberships" on public.project_members;
 create policy "read own memberships" on public.project_members
   for select using (user_id = auth.uid() or public.is_admin());
 
