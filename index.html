@@ -6,9 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="分帳趣">
+  <meta name="apple-mobile-web-app-title" content="算錢用ㄉ東西">
   <meta name="theme-color" content="#f2f2f7">
-  <title>分帳趣</title>
+  <title>算錢用ㄉ東西</title>
   <style>
     * {
       margin: 0;
@@ -587,32 +587,6 @@
       color: #34c759;
     }
 
-    /* 結算轉帳列 */
-    .transfer {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 14px 16px;
-      border-bottom: .5px solid rgba(0, 0, 0, .08);
-      font-size: 15px;
-    }
-
-    .transfer:last-child {
-      border-bottom: none;
-    }
-
-    .transfer .arrow {
-      color: #8e8e93;
-      font-size: 18px;
-    }
-
-    .transfer .amt {
-      margin-left: auto;
-      font-weight: 700;
-      color: #007aff;
-      font-size: 16px;
-    }
-
     /* 圓餅圖 */
     .pie-wrap {
       display: flex;
@@ -737,7 +711,7 @@
         <div class="project-pill" id="projectPill" onclick="openProjectSheet()">
           <span>📁</span><span id="projectName">專案</span><span class="chev">▾</span>
         </div>
-        <h1 id="navTitle">支出</h1>
+        <h1 id="navTitle">記記</h1>
         <div class="sub" id="navSub"></div>
       </div>
 
@@ -783,13 +757,13 @@
   </div>
 
   <div class="note">
-    <h3>📱 分帳趣 — 原型說明</h3>
+    <h3>📱 算錢用ㄉ東西 — 原型說明</h3>
     三種專案類型：<br>
-    <b>多人分帳</b>：記支出、選分攤者，自動算出最少轉帳結算方案。<br>
+    <b>多人分帳</b>：特定付款（預設）、均分、🎲 隨機抽人買單，自動算最少轉帳結算。<br>
     <b>共同基金</b>：成員存入、從基金支出，追蹤餘額與每人應補繳。<br>
     <b>個人記帳</b>：自己的收支帳本與統計。<br><br>
-    記帳可選固定分類（早餐、晚餐、交通⋯）再填詳細說明；統計頁有支出分類圓餅圖。<br><br>
-    資料存在瀏覽器，重開不會消失。iPhone 可用 Safari「加入主畫面」變成全螢幕 app。
+    記帳可選固定分類再填詳細說明；統計頁有支出分類與成員圓餅圖。<br><br>
+    資料存在瀏覽器；設定 Supabase 後可上雲多人同步（見部署指南）。iPhone 可用 Safari「加入主畫面」變成全螢幕 app。
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -877,7 +851,11 @@
       const bal = {};
       members.forEach(m => bal[m.id] = 0);
       expenses.forEach(e => {
-        if (e.mode === 'exact') {
+        if (e.mode === 'random') {
+          if (!e.revealed) return; // 未開獎不列入，避免被反推出結果
+          if (bal[e.payer] !== undefined) bal[e.payer] += e.amount;
+          if (bal[e.loser] !== undefined) bal[e.loser] -= e.amount;
+        } else if (e.mode === 'exact') {
           // 特定付款：逐人記先付與支出
           Object.entries(e.paid || {}).forEach(([id, a]) => { if (bal[id] !== undefined) bal[id] += a; });
           Object.entries(e.spent || {}).forEach(([id, a]) => { if (bal[id] !== undefined) bal[id] -= a; });
@@ -954,7 +932,11 @@
     function memberPaidBreakdown() {
       const sums = {};
       expenses.forEach(e => {
-        if (e.mode === 'exact') {
+        if (e.mode === 'random') {
+          if (!e.revealed) return;
+          const n = memberById(e.payer)?.name || '?';
+          sums[n] = (sums[n] || 0) + e.amount;
+        } else if (e.mode === 'exact') {
           Object.entries(e.paid || {}).forEach(([id, a]) => {
             const n = memberById(+id)?.name || '?';
             sums[n] = (sums[n] || 0) + a;
@@ -970,7 +952,11 @@
     function memberShareBreakdown() {
       const sums = {};
       expenses.forEach(e => {
-        if (e.mode === 'exact') {
+        if (e.mode === 'random') {
+          if (!e.revealed) return;
+          const n = memberById(e.loser)?.name || '?';
+          sums[n] = (sums[n] || 0) + e.amount;
+        } else if (e.mode === 'exact') {
           Object.entries(e.spent || {}).forEach(([id, a]) => {
             const n = memberById(+id)?.name || '?';
             sums[n] = (sums[n] || 0) + a;
@@ -1051,7 +1037,11 @@
         html += `<div class="card">`;
         [...expenses].reverse().forEach(e => {
           let avatarId, payText, splitText;
-          if (e.mode === 'exact') {
+          if (e.mode === 'random') {
+            avatarId = e.payer;
+            payText = (memberById(e.payer)?.name || '?') + ' 先付';
+            splitText = e.revealed ? `🎲 ${memberById(e.loser)?.name || '?'} 買單` : '🎲 未開獎';
+          } else if (e.mode === 'exact') {
             const pids = Object.keys(e.paid || {}).map(Number);
             avatarId = pids[0] || 0;
             payText = pids.map(id => memberById(id)?.name || '?').join('、') + ' 先付';
@@ -1068,6 +1058,7 @@
           <div class="detail">${e.desc && e.cat ? e.cat + ' · ' : ''}${payText} · ${splitText} · ${e.date}</div>
         </div>
         <div class="amount">${fmt(e.amount)}</div>
+        ${e.mode === 'random' && !e.revealed ? `<button class="del-btn" style="color:#ff9500" onclick="revealRandom(${e.id})">🎲</button>` : ''}
         <button class="del-btn" onclick="delExpense(${e.id})">✕</button>
       </div>`;
         });
@@ -1161,6 +1152,22 @@
     function renderSettlePage(type) {
       let html = '';
       if (type === 'split') {
+        // 🎲 未開獎的隨機付款
+        const pending = expenses.filter(e => e.mode === 'random' && !e.revealed);
+        if (pending.length) {
+          html += `<div class="section-title">🎲 未開獎（尚未列入結算）</div><div class="card">`;
+          pending.forEach(e => {
+            html += `<div class="row">
+          <div class="avatar" style="background:#ff9500">🎲</div>
+          <div class="grow"><div class="title">${e.desc || e.cat || '神秘支出'}</div>
+            <div class="detail">${memberById(e.payer)?.name || '?'} 先付 · ${e.date}</div></div>
+          <div class="amount">${fmt(e.amount)}</div>
+          <button class="del-btn" style="color:#ff9500;font-size:14px;font-weight:700" onclick="revealRandom(${e.id})">開獎</button>
+        </div>`;
+          });
+          html += `</div>`;
+        }
+
         const plan = settlements();
         const pies = pieChartHTML(memberPaidBreakdown(), '💳 誰先付多少') +
           pieChartHTML(memberShareBreakdown(), '🍽️ 誰花得多（分攤）') +
@@ -1187,7 +1194,7 @@
         document.getElementById('navSub').textContent = `基金餘額 ${fmt(s.bal)}`;
         html += `<div class="stat-card green"><div class="label">基金餘額</div><div class="big">${fmt(s.bal)}</div>
       <div class="meta">總存入 ${fmt(s.tin)} · 總支出 ${fmt(s.tout)}</div></div>`;
-        if (!members.length) return html + `<div class="empty"><div class="icon">👥</div><p>先到「成員」新增成員</p></div>`;
+        if (!members.length) return html + `<div class="empty"><div class="icon">👥</div><p>先到「自訂」新增成員</p></div>`;
         const share = s.tout / members.length;
         html += `<div class="section-title">分攤狀況（支出均攤，每人 ${fmt(share)}）</div><div class="card">`;
         members.forEach(m => {
@@ -1221,14 +1228,24 @@
     }
 
     /* ---------- 操作 ---------- */
-    function delExpense(id) { expenses = expenses.filter(e => e.id !== id); save(); toast('已刪除紀錄'); render(); }
+    function delExpense(id) {
+      const e = expenses.find(x => x.id === id);
+      if (!confirm(`確定刪除「${e?.desc || e?.cat || '這筆紀錄'}」（${fmt(e?.amount || 0)}）？`)) return;
+      expenses = expenses.filter(x => x.id !== id); save(); toast('已刪除紀錄'); render();
+    }
     function delMember(id) {
       const involved = expenses.some(e => e.payer === id || (e.splitters || []).includes(id)
-        || (e.paid && e.paid[id]) || (e.spent && e.spent[id]));
+        || (e.paid && e.paid[id]) || (e.spent && e.spent[id])
+        || (e.candidates || []).includes(id) || e.loser === id);
       if (involved) { toast('此成員已有帳目，無法刪除'); return; }
-      members = members.filter(m => m.id !== id); save(); toast('已刪除成員'); render();
+      const m = memberById(id);
+      if (!confirm(`確定刪除成員「${m?.name || '?'}」？`)) return;
+      members = members.filter(x => x.id !== id); save(); toast('已刪除成員'); render();
     }
-    function markSettled() { expenses = []; save(); toast('已全部結清 🎉'); render(); }
+    function markSettled() {
+      if (!confirm('確定標記全部已結清？所有帳目將被清空，此動作無法復原')) return;
+      expenses = []; save(); toast('已全部結清 🎉'); render();
+    }
 
     /* ---------- 新增 sheet ---------- */
     function openSheet() {
@@ -1249,6 +1266,7 @@
         <div class="chips" id="modeChips">
           <div class="chip on" data-m="exact" onclick="selectMode(this)">特定付款</div>
           <div class="chip" data-m="equal" onclick="selectMode(this)">均分</div>
+          <div class="chip" data-m="random" onclick="selectMode(this)">🎲 隨機付款</div>
         </div></div>
       <div id="modeArea">${exactFormHTML()}</div>
       <button class="btn" onclick="addExpense()">記一筆</button>`;
@@ -1274,6 +1292,7 @@
       // 只有新增成員時自動聚焦輸入框（記帳表單避免跳出系統鍵盤蓋住數字鍵盤）
       if (currentPage === 'members') setTimeout(() => body.querySelector('input')?.focus(), 300);
     }
+
     /* ---------- 數字鍵盤 ---------- */
     let amtStr = '';
     let cellStr = {};      // 特定付款各格金額（key: 'pay_成員id' / 'spend_成員id'）
@@ -1309,7 +1328,7 @@
       }
     }
 
-    /* ---------- 特定付款表單 ---------- */
+    /* ---------- 分帳方式表單 ---------- */
     function exactFormHTML() {
       cellStr = {}; activeKey = null;
       const rows = members.map(m => `
@@ -1339,10 +1358,37 @@
       <div class="chips" id="chips">${members.map(m => `<div class="chip on" data-id="${m.id}" onclick="this.classList.toggle('on')">${m.name}</div>`).join('')}</div>
     </div>`;
     }
+    function randomFormHTML() {
+      cellStr = {}; activeKey = null;
+      return `
+    <div class="field"><label>金額 (NT$)</label>${keypadHTML()}</div>
+    <div class="field"><label>誰先付的？</label><select id="inPayer">${members.map(m => `<option value="${m.id}">${m.name}</option>`).join('')}</select></div>
+    <div class="field"><label>誰參加抽籤？（抽中的人買單）</label>
+      <div class="chips" id="candChips">${members.map(m => `<div class="chip on" data-id="${m.id}" onclick="this.classList.toggle('on')">${m.name}</div>`).join('')}</div>
+    </div>
+    <div class="field"><label>公布時機</label>
+      <div class="chips" id="revealChips">
+        <div class="chip on" data-r="now" onclick="selectReveal(this)">🎉 立刻公布</div>
+        <div class="chip" data-r="later" onclick="selectReveal(this)">🕵️ 結帳時公布</div>
+      </div></div>`;
+    }
     function selectMode(el) {
       document.querySelectorAll('#modeChips .chip').forEach(c => c.classList.remove('on'));
       el.classList.add('on');
-      document.getElementById('modeArea').innerHTML = el.dataset.m === 'exact' ? exactFormHTML() : equalFormHTML();
+      const m = el.dataset.m;
+      document.getElementById('modeArea').innerHTML =
+        m === 'exact' ? exactFormHTML() : m === 'random' ? randomFormHTML() : equalFormHTML();
+    }
+    function selectReveal(el) {
+      document.querySelectorAll('#revealChips .chip').forEach(c => c.classList.remove('on'));
+      el.classList.add('on');
+    }
+    function revealRandom(id) {
+      const e = expenses.find(x => x.id === id);
+      if (!e || e.revealed) return;
+      e.revealed = true;
+      save(); render();
+      toast(`🎲 開獎：${memberById(e.loser)?.name || '?'} 買單 ${fmt(e.amount)}！`);
     }
     function focusCell(key) {
       activeKey = key;
@@ -1388,6 +1434,7 @@
       const cats = getCats(kind);
       if (cats.length <= 1) { toast('至少要保留一個分類'); return; }
       const name = cats[i];
+      if (!confirm(`確定刪除分類「${name}」？（既有帳目不受影響）`)) return;
       cats.splice(i, 1);
       save(); toast(`已刪除「${name}」`); render();
     }
@@ -1431,6 +1478,19 @@
         if (tp <= 0) { toast('請輸入先付金額'); return; }
         if (Math.abs(tp - ts) > 0.01) { toast(`先付合計 ${fmt(tp)} ≠ 支出合計 ${fmt(ts)}`); return; }
         expenses.push({ id: nextExpenseId++, cat, desc, amount: tp, mode: 'exact', paid, spent, payer: 0, splitters: [], date: today() });
+      } else if (mode === 'random') {
+        // 🎲 隨機抽一人買單
+        const amt = parseFloat(amtStr);
+        const payer = +document.getElementById('inPayer').value;
+        const cands = [...document.querySelectorAll('#candChips .chip.on')].map(c => +c.dataset.id);
+        const revealNow = document.querySelector('#revealChips .chip.on')?.dataset.r !== 'later';
+        if (!amt || amt <= 0) { toast('請輸入有效金額'); return; }
+        if (cands.length < 2) { toast('至少選 2 位參加抽籤'); return; }
+        const loser = cands[Math.floor(Math.random() * cands.length)];
+        expenses.push({ id: nextExpenseId++, cat, desc, amount: amt, mode: 'random', payer, candidates: cands, loser, revealed: revealNow, splitters: [], date: today() });
+        save(); closeSheet(); render();
+        toast(revealNow ? `🎲 抽中 ${memberById(loser)?.name || '?'} 買單！` : '🎲 已抽籤，到結算頁開獎');
+        return;
       } else {
         const amt = parseFloat(amtStr);
         const payer = +document.getElementById('inPayer').value;
@@ -1509,7 +1569,7 @@
       const name = document.getElementById('inProject').value.trim();
       if (!name) { toast('請輸入專案名稱'); return; }
       if (data.projects.some(p => p.name === name)) { toast('專案名稱重複了'); return; }
-      const p = { id: data.nextProjectId++, name, type: newProjType, members: [], expenses: [], nextMemberId: 1, nextExpenseId: 1 };
+      const p = { id: data.nextProjectId++, name, type: newProjType, members: [], expenses: [], nextMemberId: 1, nextExpenseId: 1, cats: { out: [...CATS.out], in: [...CATS.in] } };
       data.projects.push(p);
       data.currentProjectId = p.id;
       save(); closeSheet();
@@ -1533,10 +1593,10 @@
 
     /* ==================== 雲端同步（Supabase） ====================
        使用方式：到 supabase.com 建立免費專案後，把下面兩行填上
-       你的 Project URL 與 anon public key（詳見部署指南）。
+       你的 Project URL 與 Publishable key（詳見部署指南）。
        留空 = 純本機模式，app 一樣可以正常使用。            */
-    const SUPABASE_URL = 'https://bklyaejmluevxqufbkma.supabase.co/rest/v1/';   // 例如 'https://abcdefgh.supabase.co'
-    const SUPABASE_KEY = 'sb_publishable_2ykyBPqmtCcY0hj8yxIySw_VFVhglh_';   // anon public key
+    const SUPABASE_URL = 'https://bklyaejmluevxqufbkma.supabase.co';   // 例如 'https://abcdefgh.supabase.co'
+    const SUPABASE_KEY = 'sb_publishable_2ykyBPqmtCcY0hj8yxIySw_VFVhglh_';   // Publishable key（sb_publishable_...）或舊版 anon key
 
     let sb = null;
     try {
