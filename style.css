@@ -729,6 +729,35 @@ body {
   opacity: .75;
 }
 
+.avatar-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.avatar-img.big,
+.avatar.big {
+  width: 84px;
+  height: 84px;
+  font-size: 34px;
+}
+
+.pill-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+  vertical-align: -5px;
+}
+
+.badge.admin {
+  background: #fff3e0;
+  color: #ff9500;
+  margin-left: 6px;
+}
+
 .toast {
   position: absolute;
   top: 70px;

@@ -117,7 +117,8 @@ index.html（外殼）─ style.css（樣式）
 用 `ADMIN_EMAILS` 名單內的帳號登入 → 專案面板出現「🛡️ 管理員」：
 
 - **檢視所有雲端專案**：列出雲端全部專案，點任一個直接加入。
-- **管理帳號**：列出所有註冊帳號（暱稱、email、專案數、註冊日），可刪除帳號（不能刪自己）。刪除後該帳號無法登入、成員資格移除，但帳目與專案內容保留。
+- **管理帳號**：列出所有註冊帳號（暱稱、email、專案數、註冊日、admin 徽章），可「設為 admin／移除 admin」指派其他管理員，或刪除帳號（自己與創始管理員除外）。刪除後該帳號無法登入、成員資格移除，但帳目與專案內容保留。
+- 管理員入口在右上角 👤 帳號視窗內；管理員的名稱旁會顯示 admin 徽章、頂端按鈕會多一個 🛡️。
 
 ## 四、維護手冊
 
@@ -193,6 +194,7 @@ git push                       # 約 1 分鐘後 GitHub Pages 自動更新
 | 用代碼加入 | 登入使用者，透過後端函式 `join_project()` 驗證代碼後登記成員 | SECURITY DEFINER 函式 |
 | 檢視所有專案 | 只有管理員（JWT email 比對，寫死在資料庫函式裡） | `is_admin()` 函式 |
 | 帳號管理（列出／刪除帳號） | 只有管理員 | `admin_list_users()`／`admin_delete_user()` SECURITY DEFINER 函式 |
+| 指派／移除管理員 | 只有管理員（創始管理員不可被變更） | `admins` 表＋`admin_set_admin()` 函式 |
 | 未登入 | 只能用純本機模式，碰不到任何雲端資料 | 所有政策都要求 `auth.uid()` |
 
 管理員：`piuuuuu20069564@gmail.com`（要換人改資料庫的 `is_admin()` 函式，不是改前端）。
@@ -217,11 +219,24 @@ create table if not exists public.project_members (
 );
 alter table public.project_members enable row level security;
 
--- 3) 管理員判斷（換管理員改這裡的 email）
+-- 3) 管理員名單（創始管理員寫死在 is_admin；其他人由管理員指派進 admins 表）
+create table if not exists public.admins (
+  user_id uuid primary key,
+  email text not null,
+  granted_by uuid,
+  granted_at timestamptz not null default now()
+);
+alter table public.admins enable row level security;
+
 create or replace function public.is_admin()
-returns boolean language sql stable as $$
+returns boolean language sql stable security definer set search_path = public as $$
   select coalesce(auth.jwt()->>'email', '') = 'piuuuuu20069564@gmail.com'
+      or exists (select 1 from admins where user_id = auth.uid())
 $$;
+
+drop policy if exists "admins visible to admins" on public.admins;
+create policy "admins visible to admins" on public.admins
+  for select using (public.is_admin());
 
 -- 4) 成員判斷
 create or replace function public.is_member(p_project uuid)
@@ -287,14 +302,17 @@ drop policy if exists "read own memberships" on public.project_members;
 create policy "read own memberships" on public.project_members
   for select using (user_id = auth.uid() or public.is_admin());
 
--- 9) 管理員：列出所有帳號（非管理員呼叫會拿到空清單）
+-- 9) 管理員：列出所有帳號（含 admin 身分；非管理員呼叫會拿到空清單）
+drop function if exists public.admin_list_users();
 create or replace function public.admin_list_users()
-returns table (id uuid, email text, nickname text, created_at timestamptz, projects bigint)
+returns table (id uuid, email text, nickname text, created_at timestamptz, projects bigint, is_admin boolean)
 language sql security definer set search_path = public as $$
   select u.id, u.email::text,
          coalesce(u.raw_user_meta_data->>'nickname', split_part(u.email::text, '@', 1)),
          u.created_at,
-         (select count(*) from project_members m where m.user_id = u.id)
+         (select count(*) from project_members m where m.user_id = u.id),
+         (u.email::text = 'piuuuuu20069564@gmail.com'
+          or exists (select 1 from admins a where a.user_id = u.id))
   from auth.users u
   where public.is_admin()
   order by u.created_at desc
@@ -311,7 +329,31 @@ begin
     raise exception '不能刪除自己的帳號';
   end if;
   delete from project_members where user_id = p_user;
+  delete from admins where user_id = p_user;
   delete from auth.users where id = p_user;
+end $$;
+
+-- 11) 管理員：指派／移除其他管理員（創始管理員不可變更）
+create or replace function public.admin_set_admin(p_user uuid, p_grant boolean)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_email text;
+begin
+  if not public.is_admin() then
+    raise exception '沒有管理員權限';
+  end if;
+  select email::text into v_email from auth.users where id = p_user;
+  if v_email is null then
+    raise exception '找不到帳號';
+  end if;
+  if v_email = 'piuuuuu20069564@gmail.com' then
+    raise exception '創始管理員不可變更';
+  end if;
+  if p_grant then
+    insert into admins(user_id, email, granted_by) values (p_user, v_email, auth.uid())
+    on conflict (user_id) do nothing;
+  else
+    delete from admins where user_id = p_user;
+  end if;
 end $$;
 ```
 

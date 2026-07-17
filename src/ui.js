@@ -10,7 +10,7 @@ import {
 } from './calc.js';
 import {
   sb, cloudOn, authUser, isAdmin, setAuthUser, pullAll, syncMyProjects,
-  genCode, projPayload,
+  genCode, projPayload, ADMIN_EMAILS, refreshAdminFlag,
 } from './cloud.js';
 
 let currentPage = 'expenses';
@@ -828,10 +828,7 @@ function openProjectSheet() {
 <div class="field">
   <input id="inJoin" placeholder="輸入朋友給的 6 碼分享代碼" maxlength="6" style="text-transform:uppercase"></div>
 <button class="btn gray" onclick="app.joinByCode()">☁ 用代碼加入</button>
-${isAdmin() ? `<div class="section-title">🛡️ 管理員</div>
-<button class="btn gray" onclick="app.openAdminSheet()">檢視所有雲端專案</button>
-<div style="height:10px"></div>
-<button class="btn gray" onclick="app.openAdminUsersSheet()">管理帳號</button>` : ''}
+
 <div class="exact-sum" style="text-align:center">${cloudOn() ? (authUser ? '☁ 雲端同步已啟用' : '☁ 雲端已設定 — 登入後即可上雲／加入專案') : '尚未設定雲端 — 見部署指南'}</div>`;
   body.innerHTML = html;
   document.getElementById('mask').classList.add('open');
@@ -932,17 +929,30 @@ async function openAdminUsersSheet() {
   let html = `<div class="section-title">共 ${rows.length} 個帳號</div><div class="card">`;
   rows.forEach(u => {
     const me = authUser && u.id === authUser.id;
+    const founder = (u.email || '').toLowerCase() === ADMIN_EMAILS[0];
     const day = String(u.created_at || '').slice(0, 10);
     html += `<div class="row">
       <div class="avatar" style="background:${me ? '#007aff' : '#8e8e93'}">${initials(u.nickname || '?')}</div>
       <div class="grow">
-        <div class="title">${esc(u.nickname)}${me ? '<span class="badge" style="margin-left:6px">我</span>' : ''}</div>
+        <div class="title">${esc(u.nickname)}${u.is_admin ? '<span class="badge admin">admin</span>' : ''}${me ? '<span class="badge" style="margin-left:6px">我</span>' : ''}</div>
         <div class="detail">${esc(u.email)} · ${u.projects} 個專案 · 註冊 ${esc(day)}</div>
       </div>
-      ${me ? '' : `<button class="del-btn" onclick="app.adminDeleteUser('${esc(u.id)}','${esc(u.nickname)}')">✕</button>`}
+      ${(me || founder) ? '' : `<button class="del-btn" style="color:${u.is_admin ? '#8e8e93' : '#ff9500'};font-size:13px;font-weight:700" onclick="app.adminToggleAdmin('${esc(u.id)}', ${u.is_admin ? 'false' : 'true'}, '${esc(u.nickname)}')">${u.is_admin ? '移除admin' : '設為admin'}</button>`}
+      ${(me || founder) ? '' : `<button class="del-btn" onclick="app.adminDeleteUser('${esc(u.id)}','${esc(u.nickname)}')">✕</button>`}
     </div>`;
   });
   body.innerHTML = html + `</div>`;
+}
+async function adminToggleAdmin(id, grant, name) {
+  const msg = grant
+    ? `確定把「${name}」設為管理員？他將能看到所有專案並管理帳號`
+    : `確定移除「${name}」的管理員權限？`;
+  if (!confirm(msg)) return;
+  const { error } = await sb.rpc('admin_set_admin', { p_user: id, p_grant: grant });
+  if (error) { toast('操作失敗：' + error.message); return; }
+  toast(grant ? `🛡️ ${name} 已成為管理員` : `已移除 ${name} 的管理員權限`);
+  refreshAdminFlag();
+  openAdminUsersSheet();
 }
 async function adminDeleteUser(id, name) {
   if (!confirm(`確定刪除帳號「${name}」？該帳號將無法再登入，其成員資格一併移除（帳目與專案內容保留）`)) return;
@@ -982,13 +992,22 @@ function openAuthSheet() {
   const body = document.getElementById('sheetBody');
   if (authUser) {
     document.getElementById('sheetTitle').textContent = '我的帳號';
+    const ava = authUser.avatar
+      ? `<img class="avatar-img" src="${authUser.avatar}" alt="">`
+      : `<div class="avatar" style="background:#007aff">${initials(authUser.nickname)}</div>`;
     body.innerHTML = `
       <div class="card"><div class="row">
-        <div class="avatar" style="background:#007aff">${initials(authUser.nickname)}</div>
-        <div class="grow"><div class="title">${esc(authUser.nickname)}</div>
+        ${ava}
+        <div class="grow">
+          <div class="title">${esc(authUser.nickname)}${isAdmin() ? '<span class="badge admin">admin</span>' : ''}</div>
           <div class="detail">${esc(authUser.email)}</div></div>
       </div></div>
-      <button class="btn gray" onclick="app.changeNick()">✎ 修改使用者名稱</button>
+      <button class="btn gray" onclick="app.openProfileSheet()">✎ 編輯個人資料</button>
+      ${isAdmin() ? `
+      <div class="section-title">🛡️ 管理員</div>
+      <button class="btn gray" onclick="app.openAdminSheet()">檢視所有雲端專案</button>
+      <div style="height:10px"></div>
+      <button class="btn gray" onclick="app.openAdminUsersSheet()">管理帳號</button>` : ''}
       <div style="height:10px"></div>
       <button class="btn gray" onclick="app.doLogout()">登出</button>`;
   } else {
@@ -1023,6 +1042,56 @@ async function doSignup() {
   if (error) { toast('註冊失敗：' + error.message); return; }
   if (d && d.user && !d.session) { closeSheet(); toast('請到信箱點確認信後再登入'); return; }
   closeSheet(); toast(`註冊成功，嗨 ${nickname}！`);
+}
+let pendingAvatar = null; // 尚未儲存的新頭貼
+function openProfileSheet() {
+  if (!authUser) { toast('請先登入'); return; }
+  pendingAvatar = null;
+  document.getElementById('sheetTitle').textContent = '✎ 編輯個人資料';
+  const cur = authUser.avatar
+    ? `<img class="avatar-img big" src="${authUser.avatar}" alt="">`
+    : `<div class="avatar big" style="background:#007aff">${initials(authUser.nickname)}</div>`;
+  document.getElementById('sheetBody').innerHTML = `
+    <div class="field" style="text-align:center">
+      <div id="avatarPreview" style="display:flex;justify-content:center;margin-bottom:10px">${cur}</div>
+      <label class="btn gray" style="display:block">
+        📷 更換大頭貼
+        <input type="file" accept="image/*" style="display:none" onchange="app.pickAvatar(event)">
+      </label>
+    </div>
+    <div class="field"><label>使用者名稱</label>
+      <input id="profNick" maxlength="8" value="${esc(authUser.nickname)}"></div>
+    <button class="btn" onclick="app.saveProfile()">儲存</button>`;
+  document.getElementById('mask').classList.add('open');
+  document.getElementById('sheet').classList.add('open');
+}
+function pickAvatar(ev) {
+  const file = ev.target.files && ev.target.files[0];
+  if (!file) return;
+  const img = new Image();
+  img.onload = () => {
+    // 裁成正方形並縮到 96×96，存成小型 JPEG（放在帳號 metadata，不需另開儲存空間）
+    const c = document.createElement('canvas');
+    c.width = 96; c.height = 96;
+    const ctx = c.getContext('2d');
+    const side = Math.min(img.width, img.height);
+    ctx.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, 96, 96);
+    pendingAvatar = c.toDataURL('image/jpeg', 0.8);
+    const pv = document.getElementById('avatarPreview');
+    if (pv) pv.innerHTML = `<img class="avatar-img big" src="${pendingAvatar}" alt="">`;
+    URL.revokeObjectURL(img.src);
+  };
+  img.src = URL.createObjectURL(file);
+}
+async function saveProfile() {
+  const nick = document.getElementById('profNick').value.trim();
+  if (!nick) { toast('請填使用者名稱'); return; }
+  const meta = { nickname: nick };
+  if (pendingAvatar) meta.avatar = pendingAvatar;
+  const { data: d, error } = await sb.auth.updateUser({ data: meta });
+  if (error) { toast('儲存失敗：' + error.message); return; }
+  if (d && d.user) setAuthUser(d.user);
+  closeSheet(); toast('個人資料已更新 ✓');
 }
 async function changeNick() {
   const n = prompt('新的使用者名稱（各專案未另外自訂時的預設名稱）', authUser ? authUser.nickname : '');
@@ -1095,5 +1164,6 @@ function openHelpSheet() {
 
 export {
   toast, render, openAdminUsersSheet, adminDeleteUser,
+  openProfileSheet, pickAvatar, saveProfile, adminToggleAdmin,
   switchTab, selectProjType, selectMode, selectReveal, selectKind, revealRandom, openEditSheet, focusCell, delMember, delExpense, closeSheet, switchProject, selectCat, renameProject, openSheet, openProjectSheet, openMemberSheet, openHelpSheet, openCatSheet, openAuthSheet, openAdminSheet, markSettled, manualRefresh, kp, joinProject, joinByCode, fillEqualSpend, doSignup, doLogout, doLogin, delProject, delCat, cloudAction, changeNick, addProject, addMember, addLedgerRecord, addExpense, addChat, addCat,
 };

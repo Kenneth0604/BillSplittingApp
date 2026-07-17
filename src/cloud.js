@@ -48,7 +48,8 @@ function schedulePush() {
 /* ---------- 管理員 ---------- */
 const ADMIN_EMAILS = ['piuuuuu20069564@gmail.com'];
 function isAdmin() {
-  return !!(authUser && ADMIN_EMAILS.includes((authUser.email || '').toLowerCase()));
+  if (!authUser) return false;
+  return adminFlag || ADMIN_EMAILS.includes((authUser.email || '').toLowerCase());
 }
 
 let pulling = false;
@@ -74,11 +75,33 @@ function setAuthUser(u) {
   authUser = u ? {
     id: u.id, email: u.email,
     nickname: (u.user_metadata && u.user_metadata.nickname) || (u.email || '').split('@')[0],
+    avatar: (u.user_metadata && u.user_metadata.avatar) || '',
   } : null;
-  const el = document.getElementById('userPill');
-  if (el) el.textContent = authUser ? `👤 ${authUser.nickname}` : '👤 登入';
+  updateUserPill();
   hooks.render();
-  if (authUser) syncMyProjects(); // 登入後自動抓回我是成員的所有專案
+  if (authUser) { refreshAdminFlag(); syncMyProjects(); } // 登入後：確認管理員身分＋抓回專案
+  else { adminFlag = false; }
+}
+function updateUserPill() {
+  const el = document.getElementById('userPill');
+  if (!el) return;
+  if (!authUser) { el.textContent = '👤 登入'; return; }
+  const nickEsc = String(authUser.nickname).replace(/</g, '&lt;');
+  const ava = authUser.avatar
+    ? `<img class="pill-avatar" src="${authUser.avatar}" alt="">`
+    : '👤';
+  el.innerHTML = `${ava} ${nickEsc}${isAdmin() ? ' 🛡️' : ''}`;
+}
+// 管理員身分以資料庫為準（is_admin RPC），前端只拿來決定按鈕顯示
+export let adminFlag = false;
+async function refreshAdminFlag() {
+  if (!cloudOn() || !authUser) { adminFlag = false; return; }
+  try {
+    const { data: flag } = await sb.rpc('is_admin');
+    adminFlag = !!flag;
+  } catch (e) { adminFlag = false; }
+  updateUserPill();
+  hooks.render();
 }
 // 把帳號在雲端的所有專案抓回本機清單（換裝置登入也看得到）
 let syncingMine = false;
@@ -116,4 +139,4 @@ async function initAuth() {
   } catch (e) { }
 }
 
-export { cloudOn, genCode, projPayload, pushProject, schedulePush, pullAll, isAdmin, ADMIN_EMAILS, setAuthUser, syncMyProjects, initAuth };
+export { cloudOn, genCode, projPayload, pushProject, schedulePush, pullAll, isAdmin, ADMIN_EMAILS, setAuthUser, syncMyProjects, initAuth, refreshAdminFlag, updateUserPill };

@@ -15,6 +15,10 @@ cloud.hooks.render = ui.render;
 window.app = {
   openAdminUsersSheet: ui.openAdminUsersSheet,
   adminDeleteUser: ui.adminDeleteUser,
+  openProfileSheet: ui.openProfileSheet,
+  pickAvatar: ui.pickAvatar,
+  saveProfile: ui.saveProfile,
+  adminToggleAdmin: ui.adminToggleAdmin,
   switchTab: ui.switchTab,
   selectProjType: ui.selectProjType,
   selectMode: ui.selectMode,
