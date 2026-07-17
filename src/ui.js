@@ -829,7 +829,9 @@ function openProjectSheet() {
   <input id="inJoin" placeholder="輸入朋友給的 6 碼分享代碼" maxlength="6" style="text-transform:uppercase"></div>
 <button class="btn gray" onclick="app.joinByCode()">☁ 用代碼加入</button>
 ${isAdmin() ? `<div class="section-title">🛡️ 管理員</div>
-<button class="btn gray" onclick="app.openAdminSheet()">檢視所有雲端專案</button>` : ''}
+<button class="btn gray" onclick="app.openAdminSheet()">檢視所有雲端專案</button>
+<div style="height:10px"></div>
+<button class="btn gray" onclick="app.openAdminUsersSheet()">管理帳號</button>` : ''}
 <div class="exact-sum" style="text-align:center">${cloudOn() ? (authUser ? '☁ 雲端同步已啟用' : '☁ 雲端已設定 — 登入後即可上雲／加入專案') : '尚未設定雲端 — 見部署指南'}</div>`;
   body.innerHTML = html;
   document.getElementById('mask').classList.add('open');
@@ -917,6 +919,38 @@ async function joinByCode() {
   await joinProject(code);
 }
 
+async function openAdminUsersSheet() {
+  if (!isAdmin()) { toast('沒有管理員權限'); return; }
+  document.getElementById('sheetTitle').textContent = '🛡️ 帳號管理';
+  const body = document.getElementById('sheetBody');
+  body.innerHTML = `<div class="empty" style="padding:30px">載入中⋯</div>`;
+  document.getElementById('mask').classList.add('open');
+  document.getElementById('sheet').classList.add('open');
+  const { data: rows, error } = await sb.rpc('admin_list_users');
+  if (error) { body.innerHTML = `<div class="empty">載入失敗：${esc(error.message)}<br><small>（請確認已執行 README 第五章的帳號管理 SQL）</small></div>`; return; }
+  if (!rows || !rows.length) { body.innerHTML = `<div class="empty"><div class="icon">👤</div><p>還沒有任何帳號</p></div>`; return; }
+  let html = `<div class="section-title">共 ${rows.length} 個帳號</div><div class="card">`;
+  rows.forEach(u => {
+    const me = authUser && u.id === authUser.id;
+    const day = String(u.created_at || '').slice(0, 10);
+    html += `<div class="row">
+      <div class="avatar" style="background:${me ? '#007aff' : '#8e8e93'}">${initials(u.nickname || '?')}</div>
+      <div class="grow">
+        <div class="title">${esc(u.nickname)}${me ? '<span class="badge" style="margin-left:6px">我</span>' : ''}</div>
+        <div class="detail">${esc(u.email)} · ${u.projects} 個專案 · 註冊 ${esc(day)}</div>
+      </div>
+      ${me ? '' : `<button class="del-btn" onclick="app.adminDeleteUser('${esc(u.id)}','${esc(u.nickname)}')">✕</button>`}
+    </div>`;
+  });
+  body.innerHTML = html + `</div>`;
+}
+async function adminDeleteUser(id, name) {
+  if (!confirm(`確定刪除帳號「${name}」？該帳號將無法再登入，其成員資格一併移除（帳目與專案內容保留）`)) return;
+  const { error } = await sb.rpc('admin_delete_user', { p_user: id });
+  if (error) { toast('刪除失敗：' + error.message); return; }
+  toast(`已刪除帳號「${name}」`);
+  openAdminUsersSheet();
+}
 async function openAdminSheet() {
   if (!isAdmin()) { toast('沒有管理員權限'); return; }
   document.getElementById('sheetTitle').textContent = '🛡️ 所有雲端專案';
@@ -1060,6 +1094,6 @@ function openHelpSheet() {
 
 
 export {
-  toast, render,
+  toast, render, openAdminUsersSheet, adminDeleteUser,
   switchTab, selectProjType, selectMode, selectReveal, selectKind, revealRandom, openEditSheet, focusCell, delMember, delExpense, closeSheet, switchProject, selectCat, renameProject, openSheet, openProjectSheet, openMemberSheet, openHelpSheet, openCatSheet, openAuthSheet, openAdminSheet, markSettled, manualRefresh, kp, joinProject, joinByCode, fillEqualSpend, doSignup, doLogout, doLogin, delProject, delCat, cloudAction, changeNick, addProject, addMember, addLedgerRecord, addExpense, addChat, addCat,
 };

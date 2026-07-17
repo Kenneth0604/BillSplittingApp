@@ -158,5 +158,8 @@ t('重新整理（本機模式）不炸', true);
 await ui.joinByCode();
 t('未登入加入被擋', true);
 
+await ui.openAdminUsersSheet();
+t('非管理員帳號管理被擋', true);
+
 console.log(`\n===== ${pass} 通過 / ${fail} 失敗 =====`);
 process.exit(fail ? 1 : 0);

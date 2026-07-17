@@ -114,7 +114,10 @@ index.html（外殼）─ style.css（樣式）
 
 ### 管理員操作
 
-用 `ADMIN_EMAILS` 名單內的帳號登入 → 專案面板出現「🛡️ 管理員」→ 檢視所有雲端專案 → 點任一專案即加入。
+用 `ADMIN_EMAILS` 名單內的帳號登入 → 專案面板出現「🛡️ 管理員」：
+
+- **檢視所有雲端專案**：列出雲端全部專案，點任一個直接加入。
+- **管理帳號**：列出所有註冊帳號（暱稱、email、專案數、註冊日），可刪除帳號（不能刪自己）。刪除後該帳號無法登入、成員資格移除，但帳目與專案內容保留。
 
 ## 四、維護手冊
 
@@ -189,6 +192,7 @@ git push                       # 約 1 分鐘後 GitHub Pages 自動更新
 | 刪除專案 | 擁有者或管理員 | RLS delete 政策 |
 | 用代碼加入 | 登入使用者，透過後端函式 `join_project()` 驗證代碼後登記成員 | SECURITY DEFINER 函式 |
 | 檢視所有專案 | 只有管理員（JWT email 比對，寫死在資料庫函式裡） | `is_admin()` 函式 |
+| 帳號管理（列出／刪除帳號） | 只有管理員 | `admin_list_users()`／`admin_delete_user()` SECURITY DEFINER 函式 |
 | 未登入 | 只能用純本機模式，碰不到任何雲端資料 | 所有政策都要求 `auth.uid()` |
 
 管理員：`piuuuuu20069564@gmail.com`（要換人改資料庫的 `is_admin()` 函式，不是改前端）。
@@ -277,6 +281,33 @@ create policy "owner or admin delete" on public.shared_projects
 -- 8) 成員表：只能看到自己的成員資格（管理員全看）
 create policy "read own memberships" on public.project_members
   for select using (user_id = auth.uid() or public.is_admin());
+
+-- 9) 管理員：列出所有帳號（非管理員呼叫會拿到空清單）
+create or replace function public.admin_list_users()
+returns table (id uuid, email text, nickname text, created_at timestamptz, projects bigint)
+language sql security definer set search_path = public as $$
+  select u.id, u.email::text,
+         coalesce(u.raw_user_meta_data->>'nickname', split_part(u.email::text, '@', 1)),
+         u.created_at,
+         (select count(*) from project_members m where m.user_id = u.id)
+  from auth.users u
+  where public.is_admin()
+  order by u.created_at desc
+$$;
+
+-- 10) 管理員：刪除帳號（成員資格一併移除；專案內容保留）
+create or replace function public.admin_delete_user(p_user uuid)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_admin() then
+    raise exception '沒有管理員權限';
+  end if;
+  if p_user = auth.uid() then
+    raise exception '不能刪除自己的帳號';
+  end if;
+  delete from project_members where user_id = p_user;
+  delete from auth.users where id = p_user;
+end $$;
 ```
 
 執行後 push 最新的 `index.html`（前端已改為登入後才可上雲、加入改走 `join_project()`）。

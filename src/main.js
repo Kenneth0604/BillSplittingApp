@@ -13,6 +13,8 @@ cloud.hooks.render = ui.render;
 
 // 3) 內聯 onclick 的全域橋（HTML 樣板以 app.* 呼叫）
 window.app = {
+  openAdminUsersSheet: ui.openAdminUsersSheet,
+  adminDeleteUser: ui.adminDeleteUser,
   switchTab: ui.switchTab,
   selectProjType: ui.selectProjType,
   selectMode: ui.selectMode,
