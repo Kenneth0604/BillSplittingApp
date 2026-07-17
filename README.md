@@ -7,27 +7,22 @@
 ## 一、整體架構
 
 ```
-┌──────────────┐   git push    ┌──────────────────┐
-│  index.html   │ ───────────▶ │  GitHub Pages     │  ← 使用者打開的網址
-│ （唯一的程式檔）│               │  （靜態網頁託管）    │
-└──────────────┘               └────────┬─────────┘
-                                        │ 瀏覽器載入
-                                        ▼
-                               ┌──────────────────┐
-                               │   使用者的瀏覽器     │
-                               │  UI + 全部計算邏輯   │
-                               │  localStorage 存資料 │
-                               └────────┬─────────┘
-                                        │ supabase-js（CDN 載入）
-                                        ▼
-                               ┌──────────────────┐
-                               │     Supabase      │
-                               │ shared_projects 表 │ ← 雲端共享的專案
-                               │ Auth（帳號系統）    │ ← 登入／註冊
-                               └──────────────────┘
+index.html（外殼）─ style.css（樣式）
+      │
+      └─ <script type="module"> src/main.js（開機組裝）
+              │
+              ├─ src/store.js   資料層：狀態、localStorage、遷移（無相依）
+              ├─ src/calc.js    純計算：結算演算法、運算式引擎、格式化（依賴 store）
+              ├─ src/cloud.js   雲端層：Supabase 同步與身分（依賴 store，UI 用 hooks 注入）
+              └─ src/ui.js      介面層：渲染、表單、事件（依賴以上三者）
+                        │ supabase-js（CDN）
+                        ▼
+                  Supabase（shared_projects＋project_members＋Auth）
 ```
 
-重點觀念：**所有邏輯都在前端**。沒有自己的伺服器，Supabase 只負責兩件事——存共享專案的 JSON、管帳號。
+重點觀念：**所有邏輯都在前端**，程式碼以原生 ES Modules 拆分（無 bundler）。相依方向固定為 store → calc → cloud → ui → main，雲端層對 UI 的呼叫透過 `hooks`（main.js 接線）避免循環相依；HTML 樣板的內聯事件經由 `window.app` 橋呼叫模組函式。
+
+**開發注意**：ES Modules 受 CORS 限制，**不能直接雙擊 index.html 開啟（file:// 會失敗）**。本機開發請在專案資料夾跑 `python -m http.server 8000` 後開 `http://localhost:8000`；部署到 GitHub Pages 則不受影響。改版時記得把 index.html 內 `main.js?v=N` 的版本號 +1，強制使用者拿到新程式。
 
 ## 二、運作原理
 
@@ -123,14 +118,23 @@
 
 ## 四、維護手冊
 
-### 4.1 更新程式
+### 4.1 更新程式與測試
 
 ```bash
-# 改完 index.html 之後
-git add index.html
+# 本機預覽
+python -m http.server 8000     # 開 http://localhost:8000
+
+# 跑測試（改完必跑）
+node test/calc.test.mjs        # 純計算單元測試
+node test/integration.mjs      # 完整功能整合測試
+
+# 部署
+git add -A
 git commit -m "說明這次改了什麼"
-git push        # 約 1 分鐘後 GitHub Pages 自動更新
+git push                       # 約 1 分鐘後 GitHub Pages 自動更新
 ```
+
+改了 `src/*.js` 記得把 index.html 的 `main.js?v=N` 版本號 +1（防瀏覽器快取舊模組）。
 
 部署狀態看 repo 的 **Actions** 分頁（pages build and deployment）。
 
@@ -138,11 +142,11 @@ git push        # 約 1 分鐘後 GitHub Pages 自動更新
 
 | 常數 | 用途 |
 |---|---|
-| `SUPABASE_URL` / `SUPABASE_KEY` | Supabase 連線設定（Project URL＋Publishable key），留空＝純本機模式 |
-| `ADMIN_EMAILS` | 管理員 email 名單 |
-| `CATS` | 新專案的預設分類 |
-| `setInterval(pullAll, 8000)` | 同步拉取頻率（毫秒）|
-| `defaultData()` | 第一次開啟時的範例資料 |
+| `SUPABASE_URL` / `SUPABASE_KEY` | `src/cloud.js`：Supabase 連線設定，留空＝純本機模式 |
+| `ADMIN_EMAILS` | `src/cloud.js`：管理員 email 名單（真正的權限在資料庫 `is_admin()`） |
+| `CATS` | `src/store.js`：新專案的預設分類 |
+| `setInterval(pullAll, 8000)` | `src/main.js`：同步拉取頻率（毫秒）|
+| `defaultData()` | `src/store.js`：第一次開啟時的範例資料 |
 
 ### 4.3 Supabase 設定備忘
 
@@ -292,4 +296,4 @@ create policy "read own memberships" on public.project_members
 
 ---
 
-*本專案由 Claude 協助開發。檔案：`index.html`（App 本體）、`README.md`（本文件）、另有《雲端部署指南》說明從零架設的完整步驟。*
+*本專案由 Claude 協助開發。檔案：`index.html`＋`style.css`＋`src/`（App 本體，ES Modules）、`test/`（單元與整合測試）、`README.md`（本文件）。*
