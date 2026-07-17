@@ -112,7 +112,7 @@ function renderExpensesPage(type) {
         splitText = `${e.splitters.length} 人分攤`;
       }
       html += `<div class="row">
-    <div class="avatar" style="background:${colorOf(avatarId)}">${initials(memberById(avatarId)?.name || '?')}</div>
+    ${memberAvatar(memberById(avatarId))}
     <div class="grow">
       <div class="title">${e.desc || e.cat || '未命名支出'}</div>
       <div class="detail">${e.desc && e.cat ? e.cat + ' · ' : ''}${payText} · ${splitText} · ${e.date}</div>
@@ -170,9 +170,10 @@ function renderMembersPage(type) {
       const s = ledgerStats();
       proj().members.forEach(m => {
         html += `<div class="row">
-      <div class="avatar" style="background:${colorOf(m.id)}">${initials(m.name)}</div>
-      <div class="grow"><div class="title">${m.name}</div><div class="detail">已存入</div></div>
+      ${memberAvatar(m)}
+      <div class="grow"><div class="title">${esc(m.name)}</div><div class="detail">已存入</div></div>
       <div class="amount pos">${fmt(s.dep[m.id])}</div>
+      <button class="del-btn" style="color:#007aff" onclick="app.openMemberEditSheet(${m.id})">✎</button>
       <button class="del-btn" onclick="app.delMember(${m.id})">✕</button>
     </div>`;
       });
@@ -183,10 +184,11 @@ function renderMembersPage(type) {
         const cls = b > 0.01 ? 'pos' : b < -0.01 ? 'neg' : '';
         const txt = b > 0.01 ? `+${fmt(b)}` : b < -0.01 ? `−${fmt(-b)}` : '已結清';
         html += `<div class="row">
-      <div class="avatar" style="background:${colorOf(m.id)}">${initials(m.name)}</div>
-      <div class="grow"><div class="title">${m.name}</div>
+      ${memberAvatar(m)}
+      <div class="grow"><div class="title">${esc(m.name)}</div>
         <div class="detail">${b > 0.01 ? '應收回' : b < -0.01 ? '應支付' : '無欠款'}</div></div>
       <div class="amount ${cls}">${txt}</div>
+      <button class="del-btn" style="color:#007aff" onclick="app.openMemberEditSheet(${m.id})">✎</button>
       <button class="del-btn" onclick="app.delMember(${m.id})">✕</button>
     </div>`;
       });
@@ -263,8 +265,8 @@ function renderSettlePage(type) {
       const cls = diff > 0.01 ? 'pos' : diff < -0.01 ? 'neg' : '';
       const txt = diff > 0.01 ? `可退回 ${fmt(diff)}` : diff < -0.01 ? `應補繳 ${fmt(-diff)}` : '剛好打平';
       html += `<div class="row">
-    <div class="avatar" style="background:${colorOf(m.id)}">${initials(m.name)}</div>
-    <div class="grow"><div class="title">${m.name}</div><div class="detail">已存入 ${fmt(s.dep[m.id])}</div></div>
+    ${memberAvatar(m)}
+    <div class="grow"><div class="title">${esc(m.name)}</div><div class="detail">已存入 ${fmt(s.dep[m.id])}</div></div>
     <div class="amount ${cls}" style="font-size:14px">${txt}</div>
   </div>`;
     });
@@ -318,10 +320,21 @@ function autoAddSelfAsMember() {
   if (p.type === 'personal') return;
   const name = chatName();
   if (!name) return;
-  if (p.members.some(m => m.name === name)) return;
-  p.members.push({ id: p.nextMemberId++, name });
+  const myAvatar = (authUser && authUser.avatar) || '';
+  const exist = p.members.find(m => m.name === name);
+  if (exist) {
+    // 已在名單：沒頭貼就補上帳號頭貼
+    if (!exist.avatar && myAvatar) { exist.avatar = myAvatar; save(); render(); }
+    return;
+  }
+  p.members.push({ id: p.nextMemberId++, name, avatar: myAvatar });
   save(); render();
   toast(`已自動將「${name}」加入成員`);
+}
+// 成員頭貼：有照片用照片，沒有用色塊字首
+function memberAvatar(m, cls = '') {
+  if (m && m.avatar) return `<img class="avatar-img ${cls}" src="${m.avatar}" alt="">`;
+  return `<div class="avatar ${cls}" style="background:${colorOf(m ? m.id : 0)}">${initials((m && m.name) || '?')}</div>`;
 }
 function chatHTML() {
   const chats = proj().chats || [];
@@ -853,7 +866,7 @@ function addProject() {
   data.currentProjectId = p.id;
   save(); closeSheet();
   if (newProjType === 'personal') { toast(`已建立「${name}」`); switchTab('expenses'); }
-  else { toast(`已建立「${name}」，先去新增成員吧`); switchTab('members'); }
+  else { toast(`已建立「${name}」`); switchTab('members'); autoAddSelfAsMember(); }
 }
 function renameProject(id) {
   const p = data.projects.find(x => x.id === id);
@@ -1043,6 +1056,66 @@ async function doSignup() {
   if (d && d.user && !d.session) { closeSheet(); toast('請到信箱點確認信後再登入'); return; }
   closeSheet(); toast(`註冊成功，嗨 ${nickname}！`);
 }
+/* ---------- 成員編輯（名稱＋頭貼） ---------- */
+let editingMemberId = null;
+let pendingMemberAvatar = null; // dataURL；'REMOVE' 表示要移除
+function openMemberEditSheet(id) {
+  const m = proj().members.find(x => x.id === id);
+  if (!m) return;
+  editingMemberId = id;
+  pendingMemberAvatar = null;
+  document.getElementById('sheetTitle').textContent = '✎ 編輯成員';
+  document.getElementById('sheetBody').innerHTML = `
+    <div class="field" style="text-align:center">
+      <div id="mAvatarPreview" style="display:flex;justify-content:center;margin-bottom:10px">${memberAvatar(m, 'big')}</div>
+      <label class="btn gray" style="display:block;margin-bottom:8px">
+        📷 更換頭貼
+        <input type="file" accept="image/*" style="display:none" onchange="app.pickMemberAvatar(event)">
+      </label>
+      ${m.avatar ? `<button class="btn gray" onclick="app.clearMemberAvatar()">移除頭貼</button>` : ''}
+    </div>
+    <div class="field"><label>成員名稱</label>
+      <input id="mNick" maxlength="8" value="${esc(m.name)}"></div>
+    <button class="btn" onclick="app.saveMemberEdit()">儲存</button>`;
+  document.getElementById('mask').classList.add('open');
+  document.getElementById('sheet').classList.add('open');
+}
+function pickMemberAvatar(ev) {
+  const file = ev.target.files && ev.target.files[0];
+  if (!file) return;
+  const img = new Image();
+  img.onload = () => {
+    const c = document.createElement('canvas');
+    c.width = 96; c.height = 96;
+    const ctx = c.getContext('2d');
+    const side = Math.min(img.width, img.height);
+    ctx.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, 96, 96);
+    pendingMemberAvatar = c.toDataURL('image/jpeg', 0.8);
+    const pv = document.getElementById('mAvatarPreview');
+    if (pv) pv.innerHTML = `<img class="avatar-img big" src="${pendingMemberAvatar}" alt="">`;
+    URL.revokeObjectURL(img.src);
+  };
+  img.src = URL.createObjectURL(file);
+}
+function clearMemberAvatar() {
+  pendingMemberAvatar = 'REMOVE';
+  const m = proj().members.find(x => x.id === editingMemberId);
+  const pv = document.getElementById('mAvatarPreview');
+  if (pv && m) pv.innerHTML = `<div class="avatar big" style="background:${colorOf(m.id)}">${initials(m.name)}</div>`;
+}
+function saveMemberEdit() {
+  const m = proj().members.find(x => x.id === editingMemberId);
+  if (!m) return;
+  const name = document.getElementById('mNick').value.trim();
+  if (!name) { toast('請填成員名稱'); return; }
+  if (proj().members.some(x => x.id !== m.id && x.name === name)) { toast('名字重複了'); return; }
+  m.name = name;
+  if (pendingMemberAvatar === 'REMOVE') m.avatar = '';
+  else if (pendingMemberAvatar) m.avatar = pendingMemberAvatar;
+  editingMemberId = null;
+  save(); closeSheet(); toast('成員資料已更新 ✓'); render();
+}
+
 let pendingAvatar = null; // 尚未儲存的新頭貼
 function openProfileSheet() {
   if (!authUser) { toast('請先登入'); return; }
@@ -1165,5 +1238,6 @@ function openHelpSheet() {
 export {
   toast, render, openAdminUsersSheet, adminDeleteUser,
   openProfileSheet, pickAvatar, saveProfile, adminToggleAdmin,
+  openMemberEditSheet, pickMemberAvatar, clearMemberAvatar, saveMemberEdit,
   switchTab, selectProjType, selectMode, selectReveal, selectKind, revealRandom, openEditSheet, focusCell, delMember, delExpense, closeSheet, switchProject, selectCat, renameProject, openSheet, openProjectSheet, openMemberSheet, openHelpSheet, openCatSheet, openAuthSheet, openAdminSheet, markSettled, manualRefresh, kp, joinProject, joinByCode, fillEqualSpend, doSignup, doLogout, doLogin, delProject, delCat, cloudAction, changeNick, addProject, addMember, addLedgerRecord, addExpense, addChat, addCat,
 };

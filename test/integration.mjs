@@ -161,5 +161,22 @@ t('未登入加入被擋', true);
 await ui.openAdminUsersSheet();
 t('非管理員帳號管理被擋', true);
 
+// ---- 自動加入成員（建立專案） ----
+localStorage.setItem('chatName', '建立者');
+ui.selectProjType(newEl({dataset:{t:'split'}}));
+gid('inProject').value = '自動成員測試';
+ui.addProject();
+t('建立專案自動加入自己為成員', store.proj().members.length === 1 && store.proj().members[0].name === '建立者');
+t('成員含頭貼欄位', 'avatar' in store.proj().members[0]);
+
+// ---- 編輯成員 ----
+const mId = store.proj().members[0].id;
+ui.openMemberEditSheet(mId);
+t('成員編輯表單開啟', gid('sheetTitle').textContent.includes('編輯成員'));
+gid('mNick').value = '改名後';
+ui.saveMemberEdit();
+t('成員改名', store.proj().members[0].name === '改名後');
+ui.delProject(store.proj().id);
+
 console.log(`\n===== ${pass} 通過 / ${fail} 失敗 =====`);
 process.exit(fail ? 1 : 0);
