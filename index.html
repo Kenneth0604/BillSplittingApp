@@ -1324,10 +1324,13 @@
     /* ---------- 操作 ---------- */
     /* ---------- 留言區 ---------- */
     const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    // 每個專案可以用不同暱稱：優先用「此專案設定過的暱稱」→ 帳號暱稱 → 上次用過的名字
+    function projKey() { const p = proj(); return p.cloud ? p.cloud.code : 'local_' + p.id; }
     function chatName() {
-      if (authUser) return authUser.nickname; // 登入後以帳號暱稱為準
       let n = '';
-      try { n = localStorage.getItem('chatName') || ''; } catch (e) { }
+      try { n = localStorage.getItem('nick_' + projKey()) || ''; } catch (e) { }
+      if (!n && authUser) n = authUser.nickname;
+      if (!n) { try { n = localStorage.getItem('chatName') || ''; } catch (e) { } }
       return n;
     }
     function chatHTML() {
@@ -1350,18 +1353,19 @@
       }
       html += `</div>
         <div class="chat-input">
-          ${authUser ? '' : `<input id="chatWho" placeholder="名字" maxlength="8" value="${esc(chatName())}">`}
-          <input id="chatText" placeholder="${authUser ? `以 ${esc(authUser.nickname)} 的身分留言⋯` : '留言⋯'}" maxlength="200" onkeydown="if(event.key==='Enter')addChat()">
+          <input id="chatWho" placeholder="此專案暱稱" maxlength="8" value="${esc(chatName())}">
+          <input id="chatText" placeholder="留言⋯" maxlength="200" onkeydown="if(event.key==='Enter')addChat()">
           <button class="chat-send" onclick="addChat()">送出</button>
         </div>`;
       return html;
     }
     function addChat() {
-      const name = authUser ? authUser.nickname : document.getElementById('chatWho').value.trim();
+      const name = document.getElementById('chatWho').value.trim();
       const text = document.getElementById('chatText').value.trim();
-      if (!name) { toast('請填名字'); return; }
+      if (!name) { toast('請填暱稱'); return; }
       if (!text) { toast('請輸入留言'); return; }
-      if (!authUser) { try { localStorage.setItem('chatName', name); } catch (e) { } }
+      // 記住「這個專案」用的暱稱（每個專案可以不同）
+      try { localStorage.setItem('nick_' + projKey(), name); localStorage.setItem('chatName', name); } catch (e) { }
       const d = new Date();
       const hh = String(d.getHours()).padStart(2, '0'), mm = String(d.getMinutes()).padStart(2, '0');
       if (!proj().chats) proj().chats = [];
@@ -1694,6 +1698,8 @@
     <div class="field">
       <input id="inJoin" placeholder="輸入朋友給的 6 碼分享代碼" maxlength="6" style="text-transform:uppercase"></div>
     <button class="btn gray" onclick="joinByCode()">☁ 用代碼加入</button>
+    ${isAdmin() ? `<div class="section-title">🛡️ 管理員</div>
+    <button class="btn gray" onclick="openAdminSheet()">檢視所有雲端專案</button>` : ''}
     <div class="exact-sum" style="text-align:center">${cloudOn() ? '☁ 雲端同步已啟用' : '尚未設定雲端 — 專案旁 ☁ 可上雲分享（見部署指南）'}</div>`;
       body.innerHTML = html;
       document.getElementById('mask').classList.add('open');
@@ -1790,11 +1796,15 @@
         data.projects.filter(p => p.cloud).forEach(p => pushProject(p));
       }, 800);
     }
-    async function joinByCode() {
+    async function joinProject(code) {
       if (!cloudOn()) { toast('尚未設定雲端（見部署指南）'); return; }
-      const code = document.getElementById('inJoin').value.trim().toUpperCase();
       if (!code) { toast('請輸入分享代碼'); return; }
-      if (data.projects.some(p => p.cloud && p.cloud.code === code)) { toast('已加入過此專案'); return; }
+      const exist = data.projects.find(p => p.cloud && p.cloud.code === code);
+      if (exist) {
+        data.currentProjectId = exist.id;
+        save(); closeSheet(); switchTab('expenses');
+        toast(`已切換到「${exist.name}」`); return;
+      }
       const { data: row, error } = await sb.from('shared_projects').select('*').eq('code', code).single();
       if (error || !row) { toast('找不到此代碼'); return; }
       const p = row.data;
@@ -1804,6 +1814,42 @@
       data.currentProjectId = p.id;
       save(); closeSheet(); switchTab('expenses');
       toast(`已加入「${p.name}」`);
+    }
+    async function joinByCode() {
+      const code = document.getElementById('inJoin').value.trim().toUpperCase();
+      await joinProject(code);
+    }
+
+    /* ---------- 管理員 ---------- */
+    const ADMIN_EMAILS = ['piuuuuu20069564@gmail.com'];
+    function isAdmin() {
+      return !!(authUser && ADMIN_EMAILS.includes((authUser.email || '').toLowerCase()));
+    }
+    async function openAdminSheet() {
+      if (!isAdmin()) { toast('沒有管理員權限'); return; }
+      document.getElementById('sheetTitle').textContent = '🛡️ 所有雲端專案';
+      const body = document.getElementById('sheetBody');
+      body.innerHTML = `<div class="empty" style="padding:30px">載入中⋯</div>`;
+      document.getElementById('mask').classList.add('open');
+      document.getElementById('sheet').classList.add('open');
+      const { data: rows, error } = await sb.from('shared_projects')
+        .select('code,name,updated_at,data').order('updated_at', { ascending: false });
+      if (error) { body.innerHTML = `<div class="empty">載入失敗：${esc(error.message)}</div>`; return; }
+      if (!rows || !rows.length) { body.innerHTML = `<div class="empty"><div class="icon">☁</div><p>雲端上還沒有任何專案</p></div>`; return; }
+      let html = `<div class="section-title">共 ${rows.length} 個專案（點一下加入／切換）</div><div class="card">`;
+      rows.forEach(r => {
+        const d = r.data || {};
+        const ti = TYPE_INFO[d.type] || TYPE_INFO.split;
+        const t = String(r.updated_at || '').replace('T', ' ').slice(5, 16);
+        html += `<div class="row" style="cursor:pointer" onclick="joinProject('${esc(r.code)}')">
+          <div class="avatar" style="background:#5856d6">${initials(r.name || '?')}</div>
+          <div class="grow">
+            <div class="title">${esc(r.name)}<span class="type-tag ${ti.tag}">${ti.name}</span></div>
+            <div class="detail">☁ ${esc(r.code)} · ${(d.members || []).length} 位成員 · ${(d.expenses || []).length} 筆 · 更新 ${esc(t)}</div>
+          </div>
+        </div>`;
+      });
+      body.innerHTML = html + `</div>`;
     }
     let pulling = false;
     async function pullAll() {
