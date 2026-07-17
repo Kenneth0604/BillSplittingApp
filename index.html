@@ -1172,7 +1172,9 @@
         </div>
         <div class="amount">${fmt(e.amount)}</div>
         ${e.mode === 'random' && !e.revealed ? `<button class="del-btn" style="color:#ff9500" onclick="revealRandom(${e.id})">🎲</button>` : ''}
-        <button class="del-btn" onclick="delExpense(${e.id})">✕</button>
+        <button class="del-btn" style="color:#007aff" onclick="openEditSheet(${e.id})">✎</button>
+        <button class="del-btn" style="color:#007aff" onclick="openEditSheet(${e.id})">✎</button>
+      <button class="del-btn" onclick="delExpense(${e.id})">✕</button>
       </div>`;
         });
         return html + `</div>`;
@@ -1421,6 +1423,98 @@
       setTimeout(() => { const c = document.getElementById('content'); if (c) c.scrollTop = c.scrollHeight; }, 50);
     }
 
+    /* ---------- 編輯紀錄 ---------- */
+    let editingId = null;
+    // 新增或更新一筆紀錄（editingId 有值時原地更新、保留 id 與未指定欄位）
+    function commitRecord(rec) {
+      if (editingId != null) {
+        const i = expenses.findIndex(x => x.id === editingId);
+        if (i >= 0) expenses[i] = Object.assign({}, expenses[i], rec, { id: expenses[i].id });
+        editingId = null;
+        save(); closeSheet(); toast('已更新 ✓'); render();
+      } else {
+        rec.id = nextExpenseId++;
+        expenses.push(rec);
+        save(); closeSheet(); toast('已記帳 ✓'); render();
+      }
+    }
+    function dateToISO(md) {
+      const p = String(md || '').split('/');
+      if (p.length !== 2) return todayISO();
+      const y = new Date().getFullYear();
+      return `${y}-${String(+p[0]).padStart(2, '0')}-${String(+p[1]).padStart(2, '0')}`;
+    }
+    function markCatChip(cat) {
+      const chips = [...document.querySelectorAll('#catChips .chip')];
+      if (!chips.length) return;
+      chips.forEach(c => c.classList.remove('on'));
+      const hit = chips.find(c => c.dataset.c === cat);
+      (hit || chips[0]).classList.add('on');
+    }
+    function setAmtDisplay(v) {
+      amtStr = String(v);
+      const d = document.getElementById('amtDisplay');
+      if (d) { d.textContent = amtText(amtStr); d.classList.remove('zero'); }
+    }
+    function openEditSheet(id) {
+      const e = expenses.find(x => x.id === id);
+      if (!e) return;
+      const type = proj().type;
+      openSheet(); // 先建好「新增」表單再回填
+      editingId = id;
+      const isSplit = type === 'split';
+      document.getElementById('sheetTitle').textContent = isSplit ? '✎ 編輯支出' : '✎ 編輯紀錄';
+      const inDesc = document.getElementById('inDesc'); if (inDesc) inDesc.value = e.desc || '';
+      const inDate = document.getElementById('inDate'); if (inDate) inDate.value = dateToISO(e.date);
+      if (isSplit) {
+        const mode = e.mode || 'equal';
+        const mc = document.getElementById('modeChips');
+        if (mc) mc.parentElement.style.display = 'none'; // 編輯時鎖定分帳方式
+        const area = document.getElementById('modeArea');
+        if (mode === 'equal') {
+          area.innerHTML = equalFormHTML();
+          setAmtDisplay(e.amount);
+          const sel = document.getElementById('inPayer'); if (sel) sel.value = String(e.payer);
+          [...document.querySelectorAll('#chips .chip')].forEach(c =>
+            c.classList.toggle('on', (e.splitters || []).includes(+c.dataset.id)));
+        } else if (mode === 'exact') {
+          members.forEach(m => {
+            const pv = (e.paid || {})[m.id], sv = (e.spent || {})[m.id];
+            if (pv) {
+              cellStr['pay_' + m.id] = String(pv);
+              const el = document.getElementById('cell_pay_' + m.id);
+              if (el) { el.textContent = String(pv); el.classList.remove('zero'); }
+            }
+            if (sv) {
+              cellStr['spend_' + m.id] = String(sv);
+              const el = document.getElementById('cell_spend_' + m.id);
+              if (el) { el.textContent = String(sv); el.classList.remove('zero'); }
+            }
+          });
+          updateExactSum();
+        } else {
+          // random：只能改金額/分類/說明/日期，不重抽
+          area.innerHTML = `
+      <div class="field"><label>金額 (NT$)</label>${keypadHTML()}</div>
+      <div class="exact-sum">🎲 抽籤名單與結果不變（要重抽請刪除後重記一筆）</div>`;
+          setAmtDisplay(e.amount);
+        }
+      } else {
+        const kind = e.kind === 'in' ? 'in' : 'out';
+        [...document.querySelectorAll('#kindChips .chip')].forEach(c => {
+          c.classList.remove('on', 'green');
+          if (c.dataset.k === kind) { c.classList.add('on'); if (kind === 'in') c.classList.add('green'); }
+        });
+        const pf = document.getElementById('payerField');
+        if (pf) pf.style.display = kind === 'in' ? 'block' : 'none';
+        const cc = document.getElementById('catChips');
+        if (cc) cc.innerHTML = catChipsHTML(kind);
+        const sel = document.getElementById('inPayer'); if (sel && e.payer) sel.value = String(e.payer);
+        setAmtDisplay(e.amount);
+      }
+      markCatChip(e.cat);
+    }
+
     function delExpense(id) {
       const e = expenses.find(x => x.id === id);
       if (!confirm(`確定刪除「${e?.desc || e?.cat || '這筆紀錄'}」（${fmt(e?.amount || 0)}）？`)) return;
@@ -1442,6 +1536,7 @@
 
     /* ---------- 新增 sheet ---------- */
     function openSheet() {
+      editingId = null; // 預設為「新增」，openEditSheet 會在之後設回編輯目標
       const type = proj().type;
       const sheet = document.getElementById('sheet'), body = document.getElementById('sheetBody');
       if (currentPage === 'members') {
@@ -1710,6 +1805,7 @@
     function closeSheet() {
       document.getElementById('mask').classList.remove('open');
       document.getElementById('sheet').classList.remove('open');
+      editingId = null;
     }
     function addMember() {
       const name = document.getElementById('inName').value.trim();
@@ -1721,7 +1817,9 @@
     function addExpense() {
       const cat = document.querySelector('#catChips .chip.on')?.dataset.c || '📦 其他';
       const desc = document.getElementById('inDesc').value.trim();
-      const mode = document.querySelector('#modeChips .chip.on')?.dataset.m || 'equal';
+      const editingRec = editingId != null ? expenses.find(x => x.id === editingId) : null;
+      const mode = editingRec ? (editingRec.mode || 'equal')
+        : (document.querySelector('#modeChips .chip.on')?.dataset.m || 'equal');
 
       if (mode === 'exact') {
         // 特定付款：逐人先付／支出
@@ -1735,10 +1833,17 @@
         });
         if (tp <= 0) { toast('請輸入先付金額'); return; }
         if (Math.abs(tp - ts) > 0.01) { toast(`先付合計 ${fmt(tp)} ≠ 支出合計 ${fmt(ts)}`); return; }
-        expenses.push({ id: nextExpenseId++, cat, desc, amount: tp, mode: 'exact', paid, spent, payer: 0, splitters: [], date: dateFromInput() });
+        commitRecord({ cat, desc, amount: tp, mode: 'exact', paid, spent, payer: 0, splitters: [], date: dateFromInput() });
+        return;
       } else if (mode === 'random') {
         // 🎲 隨機抽 N 個人一起買單（均攤）
         const amt = Math.round(evalAmt(amtStr));
+        if (editingRec) {
+          // 編輯隨機付款：不重抽，只更新金額/分類/說明/日期
+          if (!amt || amt <= 0) { toast('請輸入有效金額'); return; }
+          commitRecord({ cat, desc, amount: amt, date: dateFromInput() });
+          return;
+        }
         const payer = +document.getElementById('inPayer').value;
         const cands = [...document.querySelectorAll('#candChips .chip.on')].map(c => +c.dataset.id);
         const drawN = +(document.getElementById('inDrawN')?.value || 1);
@@ -1764,9 +1869,8 @@
         const splitters = [...document.querySelectorAll('#chips .chip.on')].map(c => +c.dataset.id);
         if (!amt || amt <= 0) { toast('請輸入有效金額'); return; }
         if (!splitters.length) { toast('至少選一位分攤者'); return; }
-        expenses.push({ id: nextExpenseId++, cat, desc, amount: amt, payer, splitters, date: dateFromInput() });
+        commitRecord({ cat, desc, amount: amt, payer, splitters, date: dateFromInput() });
       }
-      save(); closeSheet(); toast('已記帳 ✓'); render();
     }
     function addLedgerRecord() {
       const isFund = proj().type === 'fund';
@@ -1776,8 +1880,7 @@
       const amt = Math.round(evalAmt(amtStr));
       if (!amt || amt <= 0) { toast('請輸入有效金額'); return; }
       const payer = (isFund && kind === 'in') ? +document.getElementById('inPayer').value : 0;
-      expenses.push({ id: nextExpenseId++, cat, desc, amount: amt, kind, payer, splitters: [], date: dateFromInput() });
-      save(); closeSheet(); toast('已記帳 ✓'); render();
+      commitRecord({ cat, desc, amount: amt, kind, payer, splitters: [], date: dateFromInput() });
     }
 
     /* ---------- 專案管理 ---------- */
