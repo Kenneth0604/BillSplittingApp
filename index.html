@@ -952,7 +952,8 @@
         if (e.mode === 'random') {
           if (!e.revealed) return; // 未開獎不列入，避免被反推出結果
           if (bal[e.payer] !== undefined) bal[e.payer] += e.amount;
-          if (bal[e.loser] !== undefined) bal[e.loser] -= e.amount;
+          const ls = losersOf(e);
+          ls.forEach(id => { if (bal[id] !== undefined) bal[id] -= e.amount / ls.length; });
         } else if (e.mode === 'exact') {
           // 特定付款：逐人記先付與支出
           Object.entries(e.paid || {}).forEach(([id, a]) => { if (bal[id] !== undefined) bal[id] += a; });
@@ -1052,8 +1053,11 @@
       expenses.forEach(e => {
         if (e.mode === 'random') {
           if (!e.revealed) return;
-          const n = memberById(e.loser)?.name || '?';
-          sums[n] = (sums[n] || 0) + e.amount;
+          const ls = losersOf(e);
+          ls.forEach(id => {
+            const n = memberById(id)?.name || '?';
+            sums[n] = (sums[n] || 0) + e.amount / ls.length;
+          });
         } else if (e.mode === 'exact') {
           Object.entries(e.spent || {}).forEach(([id, a]) => {
             const n = memberById(+id)?.name || '?';
@@ -1138,7 +1142,7 @@
           if (e.mode === 'random') {
             avatarId = e.payer;
             payText = (memberById(e.payer)?.name || '?') + ' 先付';
-            splitText = e.revealed ? `🎲 ${memberById(e.loser)?.name || '?'} 買單` : '🎲 未開獎';
+            splitText = e.revealed ? `🎲 ${losersOf(e).map(id => memberById(id)?.name || '?').join('、')} 買單` : '🎲 未開獎';
           } else if (e.mode === 'exact') {
             const pids = Object.keys(e.paid || {}).map(Number);
             avatarId = pids[0] || 0;
@@ -1414,7 +1418,7 @@
     function delMember(id) {
       const involved = expenses.some(e => e.payer === id || (e.splitters || []).includes(id)
         || (e.paid && e.paid[id]) || (e.spent && e.spent[id])
-        || (e.candidates || []).includes(id) || e.loser === id);
+        || (e.candidates || []).includes(id) || e.loser === id || (e.losers || []).includes(id));
       if (involved) { toast('此成員已有帳目，無法刪除'); return; }
       const m = memberById(id);
       if (!confirm(`確定刪除成員「${m?.name || '?'}」？`)) return;
@@ -1570,12 +1574,16 @@
     <div class="field"><label>誰參加抽籤？（抽中的人買單）</label>
       <div class="chips" id="candChips">${members.map(m => `<div class="chip on" data-id="${m.id}" onclick="this.classList.toggle('on')">${m.name}</div>`).join('')}</div>
     </div>
+    <div class="field"><label>抽幾個人一起買單？（均攤）</label>
+      <select id="inDrawN">${members.map((_, i) => `<option value="${i + 1}">${i + 1} 人</option>`).join('')}</select>
+    </div>
     <div class="field"><label>公布時機</label>
       <div class="chips" id="revealChips">
         <div class="chip on" data-r="now" onclick="selectReveal(this)">🎉 立刻公布</div>
         <div class="chip" data-r="later" onclick="selectReveal(this)">🕵️ 結帳時公布</div>
       </div></div>`;
     }
+    const losersOf = e => e.losers || (e.loser != null ? [e.loser] : []);
     function selectMode(el) {
       document.querySelectorAll('#modeChips .chip').forEach(c => c.classList.remove('on'));
       el.classList.add('on');
@@ -1592,7 +1600,9 @@
       if (!e || e.revealed) return;
       e.revealed = true;
       save(); render();
-      toast(`🎲 開獎：${memberById(e.loser)?.name || '?'} 買單 ${fmt(e.amount)}！`);
+      const ls = losersOf(e);
+      const names = ls.map(id => memberById(id)?.name || '?').join('、');
+      toast(`🎲 開獎：${names} 買單 ${fmt(e.amount)}${ls.length > 1 ? `（每人 ${fmt(e.amount / ls.length)}）` : ''}！`);
     }
     function focusCell(key) {
       activeKey = key;
@@ -1683,17 +1693,26 @@
         if (Math.abs(tp - ts) > 0.01) { toast(`先付合計 ${fmt(tp)} ≠ 支出合計 ${fmt(ts)}`); return; }
         expenses.push({ id: nextExpenseId++, cat, desc, amount: tp, mode: 'exact', paid, spent, payer: 0, splitters: [], date: today() });
       } else if (mode === 'random') {
-        // 🎲 隨機抽一人買單
+        // 🎲 隨機抽 N 個人一起買單（均攤）
         const amt = parseFloat(amtStr);
         const payer = +document.getElementById('inPayer').value;
         const cands = [...document.querySelectorAll('#candChips .chip.on')].map(c => +c.dataset.id);
+        const drawN = +(document.getElementById('inDrawN')?.value || 1);
         const revealNow = document.querySelector('#revealChips .chip.on')?.dataset.r !== 'later';
         if (!amt || amt <= 0) { toast('請輸入有效金額'); return; }
         if (cands.length < 2) { toast('至少選 2 位參加抽籤'); return; }
-        const loser = cands[Math.floor(Math.random() * cands.length)];
-        expenses.push({ id: nextExpenseId++, cat, desc, amount: amt, mode: 'random', payer, candidates: cands, loser, revealed: revealNow, splitters: [], date: today() });
+        if (drawN >= cands.length) { toast('抽的人數要少於參加人數'); return; }
+        // Fisher–Yates 洗牌後取前 N 個
+        const pool = [...cands];
+        for (let i = pool.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [pool[i], pool[j]] = [pool[j], pool[i]];
+        }
+        const losers = pool.slice(0, drawN);
+        expenses.push({ id: nextExpenseId++, cat, desc, amount: amt, mode: 'random', payer, candidates: cands, losers, loser: losers[0], revealed: revealNow, splitters: [], date: today() });
         save(); closeSheet(); render();
-        toast(revealNow ? `🎲 抽中 ${memberById(loser)?.name || '?'} 買單！` : '🎲 已抽籤，到結算頁開獎');
+        const names = losers.map(id => memberById(id)?.name || '?').join('、');
+        toast(revealNow ? `🎲 抽中 ${names} 買單！` : '🎲 已抽籤，到結算頁開獎');
         return;
       } else {
         const amt = parseFloat(amtStr);
