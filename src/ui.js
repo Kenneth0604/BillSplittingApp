@@ -120,7 +120,6 @@ function renderExpensesPage(type) {
     <div class="amount">${fmt(e.amount)}</div>
     ${e.mode === 'random' && !e.revealed ? `<button class="del-btn" style="color:#ff9500" onclick="app.revealRandom(${e.id})">🎲</button>` : ''}
     <button class="del-btn" style="color:#007aff" onclick="app.openEditSheet(${e.id})">✎</button>
-    <button class="del-btn" style="color:#007aff" onclick="app.openEditSheet(${e.id})">✎</button>
   <button class="del-btn" onclick="app.delExpense(${e.id})">✕</button>
   </div>`;
     });
