@@ -1348,6 +1348,17 @@
         render();
       }
     }
+    // 加入專案時，自動把自己（以此專案的顯示名稱）加入成員名單
+    function autoAddSelfAsMember() {
+      const p = proj();
+      if (p.type === 'personal') return;
+      const name = chatName();
+      if (!name) return;
+      if (p.members.some(m => m.name === name)) return;
+      p.members.push({ id: p.nextMemberId++, name });
+      save(); render();
+      toast(`已自動將「${name}」加入成員`);
+    }
     function chatHTML() {
       const chats = proj().chats || [];
       let html = `<div class="section-title">💬 留言區</div><div class="card chat-card">`;
@@ -1835,6 +1846,7 @@
       save(); closeSheet(); switchTab('expenses');
       toast(`已加入「${p.name}」`);
       ensureProjNick();
+      autoAddSelfAsMember();
     }
     async function joinByCode() {
       const code = document.getElementById('inJoin').value.trim().toUpperCase();
