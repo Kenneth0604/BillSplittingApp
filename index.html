@@ -932,7 +932,7 @@
     });
     let currentPage = 'expenses';
 
-    const fmt = n => 'NT$ ' + (Math.round(n * 10) / 10).toLocaleString('zh-Hant');
+    const fmt = n => 'NT$ ' + Math.round(n).toLocaleString('zh-Hant'); // 金額一律取整數顯示
     const memberById = id => members.find(m => m.id === id);
     const colorOf = id => COLORS[id % COLORS.length];
     const initials = name => name.trim().slice(0, 1).toUpperCase();
@@ -1682,19 +1682,19 @@
       if (mode === 'exact') {
         // 特定付款：逐人先付／支出
         const paid = {}, spent = {};
-        const { tp, ts } = exactTotals();
+        let tp = 0, ts = 0; // 以「取整後」的數字驗證與入帳
         members.forEach(m => {
-          const p = parseFloat(cellStr['pay_' + m.id]) || 0;
-          const s = parseFloat(cellStr['spend_' + m.id]) || 0;
-          if (p > 0) paid[m.id] = p;
-          if (s > 0) spent[m.id] = s;
+          const p = Math.round(parseFloat(cellStr['pay_' + m.id]) || 0);
+          const s = Math.round(parseFloat(cellStr['spend_' + m.id]) || 0);
+          if (p > 0) { paid[m.id] = p; tp += p; }
+          if (s > 0) { spent[m.id] = s; ts += s; }
         });
         if (tp <= 0) { toast('請輸入先付金額'); return; }
         if (Math.abs(tp - ts) > 0.01) { toast(`先付合計 ${fmt(tp)} ≠ 支出合計 ${fmt(ts)}`); return; }
         expenses.push({ id: nextExpenseId++, cat, desc, amount: tp, mode: 'exact', paid, spent, payer: 0, splitters: [], date: today() });
       } else if (mode === 'random') {
         // 🎲 隨機抽 N 個人一起買單（均攤）
-        const amt = parseFloat(amtStr);
+        const amt = Math.round(parseFloat(amtStr));
         const payer = +document.getElementById('inPayer').value;
         const cands = [...document.querySelectorAll('#candChips .chip.on')].map(c => +c.dataset.id);
         const drawN = +(document.getElementById('inDrawN')?.value || 1);
@@ -1715,7 +1715,7 @@
         toast(revealNow ? `🎲 抽中 ${names} 買單！` : '🎲 已抽籤，到結算頁開獎');
         return;
       } else {
-        const amt = parseFloat(amtStr);
+        const amt = Math.round(parseFloat(amtStr));
         const payer = +document.getElementById('inPayer').value;
         const splitters = [...document.querySelectorAll('#chips .chip.on')].map(c => +c.dataset.id);
         if (!amt || amt <= 0) { toast('請輸入有效金額'); return; }
@@ -1729,7 +1729,7 @@
       const kind = document.querySelector('#kindChips .chip.on').dataset.k;
       const cat = document.querySelector('#catChips .chip.on')?.dataset.c || '📦 其他';
       const desc = document.getElementById('inDesc').value.trim();
-      const amt = parseFloat(amtStr);
+      const amt = Math.round(parseFloat(amtStr));
       if (!amt || amt <= 0) { toast('請輸入有效金額'); return; }
       const payer = (isFund && kind === 'in') ? +document.getElementById('inPayer').value : 0;
       expenses.push({ id: nextExpenseId++, cat, desc, amount: amt, kind, payer, splitters: [], date: today() });
