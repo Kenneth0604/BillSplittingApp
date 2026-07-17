@@ -410,6 +410,7 @@ body {
   transition: transform .3s cubic-bezier(.32, .72, .35, 1);
   max-height: 86%;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .sheet.open {
@@ -549,7 +550,8 @@ body {
 }
 
 .amt-cell {
-  width: 84px;
+  width: 74px;
+  max-width: 22vw;
   text-align: right;
   background: #f2f2f7;
   border-radius: 8px;
@@ -573,7 +575,8 @@ body {
 }
 
 .exact-h {
-  width: 84px;
+  width: 74px;
+  max-width: 22vw;
   text-align: center;
   flex-shrink: 0;
 }

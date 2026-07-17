@@ -39,10 +39,14 @@ function defaultData() {
           payer: 3, candidates: [1, 2, 3], loser: 2, revealed: true, splitters: [], date: '7/16'
         },
         // 隨機付款（未開獎）示範：去結算頁按「開獎」
-        {
-          id: 5, cat: '📦 其他', desc: '神秘的 6767 元支出（不要問）', amount: 6767, mode: 'random',
-          payer: 1, candidates: [1, 2, 3], loser: 3, revealed: false, splitters: [], date: '7/17'
-        },
+        (() => {
+          // 範例的未開獎紀錄：中獎者隨機決定（不能寫死，不然每次示範都同一人）
+          const demoLoser = [1, 2, 3][Math.floor(Math.random() * 3)];
+          return {
+            id: 5, cat: '📦 其他', desc: '神秘的 6767 元支出（不要問）', amount: 6767, mode: 'random',
+            payer: 1, candidates: [1, 2, 3], losers: [demoLoser], loser: demoLoser, revealed: false, splitters: [], date: '7/17'
+          };
+        })(),
       ],
       chats: [
         { name: '阿肥', text: '誰吃了我 500 的雞排？自首從寬', time: '7/16 21:06' },
