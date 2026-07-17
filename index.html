@@ -1479,19 +1479,50 @@
     let amtStr = '';
     let cellStr = {};      // 特定付款各格金額（key: 'pay_成員id' / 'spend_成員id'）
     let activeKey = null;  // 目前輸入中的格子
+    const OP_LABEL = { '/': '÷', '*': '×', '-': '−', '+': '＋' };
     function keypadHTML(withDisplay = true) {
       amtStr = ''; activeKey = null;
-      const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫'];
+      const keys = ['1', '2', '3', '/', '4', '5', '6', '*', '7', '8', '9', '-', '.', '0', '⌫', '+'];
       return (withDisplay ? `<div class="amt-display zero" id="amtDisplay">0</div>` : '') +
         `<div class="keypad">` +
-        keys.map(k => `<button class="key ${k === '.' || k === '⌫' ? 'fn' : ''}" onclick="kp('${k}')">${k}</button>`).join('') +
+        keys.map(k => {
+          const cls = OP_LABEL[k] ? 'op' : (k === '.' || k === '⌫' ? 'fn' : '');
+          return `<button class="key ${cls}" onclick="kp('${k}')">${OP_LABEL[k] || k}</button>`;
+        }).join('') +
         `</div>`;
+    }
+    // 運算式顯示（ASCII 運算子換成好看的符號）
+    const dispExpr = s => s.replace(/\//g, '÷').replace(/\*/g, '×').replace(/-/g, '−').replace(/\+/g, '＋');
+    // 安全計算運算式（只允許數字與 + - * / .），失敗回 NaN
+    function evalAmt(s) {
+      if (!s) return NaN;
+      let x = String(s);
+      while (x && '+-*/.'.includes(x[x.length - 1])) x = x.slice(0, -1); // 去掉結尾未完成的運算子
+      if (!x || !/^[\d+\-*/.]+$/.test(x)) return NaN;
+      try { return Function('"use strict";return (' + x + ')')(); } catch (e) { return NaN; }
     }
     function editAmt(s, k) {
       if (k === '⌫') return s.slice(0, -1);
-      if (k === '.') return s.includes('.') ? s : (s || '0') + '.';
+      const isOp = '+-*/'.includes(k);
+      const last = s[s.length - 1] || '';
+      if (isOp) {
+        if (!s) return '';                          // 開頭不能是運算子
+        if ('+-*/'.includes(last)) return s.slice(0, -1) + k; // 連按運算子＝換運算子
+        if (last === '.') return s;
+        return s.length < 18 ? s + k : s;
+      }
+      if (k === '.') {
+        const seg = s.split(/[+\-*/]/).pop();      // 只看目前這一段數字
+        return seg.includes('.') ? s : (s || '0') + '.';
+      }
       if (s === '0') return k;
-      return s.length < 9 ? s + k : s;
+      return s.length < 18 ? s + k : s;
+    }
+    function amtText(s) {
+      if (!s) return '0';
+      const hasOp = /[+\-*/]/.test(s);
+      const v = evalAmt(s);
+      return dispExpr(s) + (hasOp && !isNaN(v) ? ` ＝ ${Math.round(v)}` : '');
     }
     function kp(k) {
       if (activeKey) {
@@ -1499,14 +1530,14 @@
         cellStr[activeKey] = editAmt(cellStr[activeKey] || '', k);
         const el = document.getElementById('cell_' + activeKey);
         if (el) {
-          el.textContent = cellStr[activeKey] || '0';
+          el.textContent = amtText(cellStr[activeKey]);
           el.classList.toggle('zero', !cellStr[activeKey]);
         }
         updateExactSum();
       } else {
         amtStr = editAmt(amtStr, k);
         const d = document.getElementById('amtDisplay');
-        if (d) { d.textContent = amtStr || '0'; d.classList.toggle('zero', !amtStr); }
+        if (d) { d.textContent = amtText(amtStr); d.classList.toggle('zero', !amtStr); }
       }
     }
 
@@ -1612,8 +1643,8 @@
     function exactTotals() {
       let tp = 0, ts = 0;
       members.forEach(m => {
-        tp += parseFloat(cellStr['pay_' + m.id]) || 0;
-        ts += parseFloat(cellStr['spend_' + m.id]) || 0;
+        tp += evalAmt(cellStr['pay_' + m.id]) || 0;
+        ts += evalAmt(cellStr['spend_' + m.id]) || 0;
       });
       return { tp, ts };
     }
@@ -1684,8 +1715,8 @@
         const paid = {}, spent = {};
         let tp = 0, ts = 0; // 以「取整後」的數字驗證與入帳
         members.forEach(m => {
-          const p = Math.round(parseFloat(cellStr['pay_' + m.id]) || 0);
-          const s = Math.round(parseFloat(cellStr['spend_' + m.id]) || 0);
+          const p = Math.round(evalAmt(cellStr['pay_' + m.id]) || 0);
+          const s = Math.round(evalAmt(cellStr['spend_' + m.id]) || 0);
           if (p > 0) { paid[m.id] = p; tp += p; }
           if (s > 0) { spent[m.id] = s; ts += s; }
         });
@@ -1694,7 +1725,7 @@
         expenses.push({ id: nextExpenseId++, cat, desc, amount: tp, mode: 'exact', paid, spent, payer: 0, splitters: [], date: today() });
       } else if (mode === 'random') {
         // 🎲 隨機抽 N 個人一起買單（均攤）
-        const amt = Math.round(parseFloat(amtStr));
+        const amt = Math.round(evalAmt(amtStr));
         const payer = +document.getElementById('inPayer').value;
         const cands = [...document.querySelectorAll('#candChips .chip.on')].map(c => +c.dataset.id);
         const drawN = +(document.getElementById('inDrawN')?.value || 1);
@@ -1715,7 +1746,7 @@
         toast(revealNow ? `🎲 抽中 ${names} 買單！` : '🎲 已抽籤，到結算頁開獎');
         return;
       } else {
-        const amt = Math.round(parseFloat(amtStr));
+        const amt = Math.round(evalAmt(amtStr));
         const payer = +document.getElementById('inPayer').value;
         const splitters = [...document.querySelectorAll('#chips .chip.on')].map(c => +c.dataset.id);
         if (!amt || amt <= 0) { toast('請輸入有效金額'); return; }
@@ -1729,7 +1760,7 @@
       const kind = document.querySelector('#kindChips .chip.on').dataset.k;
       const cat = document.querySelector('#catChips .chip.on')?.dataset.c || '📦 其他';
       const desc = document.getElementById('inDesc').value.trim();
-      const amt = Math.round(parseFloat(amtStr));
+      const amt = Math.round(evalAmt(amtStr));
       if (!amt || amt <= 0) { toast('請輸入有效金額'); return; }
       const payer = (isFund && kind === 'in') ? +document.getElementById('inPayer').value : 0;
       expenses.push({ id: nextExpenseId++, cat, desc, amount: amt, kind, payer, splitters: [], date: today() });
