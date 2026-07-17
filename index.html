@@ -937,6 +937,17 @@
     const colorOf = id => COLORS[id % COLORS.length];
     const initials = name => name.trim().slice(0, 1).toUpperCase();
     const today = () => { const d = new Date(); return `${d.getMonth() + 1}/${d.getDate()}`; };
+    const todayISO = () => {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+    // 讀取表單日期欄（沒填就用今天），存成 M/D
+    function dateFromInput() {
+      const v = document.getElementById('inDate')?.value;
+      if (!v) return today();
+      const parts = v.split('-');
+      return `${+parts[1]}/${+parts[2]}`;
+    }
 
     function toast(msg) {
       const t = document.getElementById('toast');
@@ -1444,6 +1455,7 @@
         body.innerHTML = `
       <div class="field"><label>分類</label><div class="chips" id="catChips">${catChipsHTML('out')}</div></div>
       <div class="field"><label>詳細說明（選填）</label><input id="inDesc" placeholder="例如：鐵板燒"></div>
+      <div class="field"><label>日期</label><input id="inDate" type="date" value="${todayISO()}"></div>
       <div class="field"><label>分帳方式</label>
         <div class="chips" id="modeChips">
           <div class="chip on" data-m="exact" onclick="selectMode(this)">特定付款</div>
@@ -1466,6 +1478,7 @@
       ${isFund ? `<div class="field" id="payerField"><label>誰存入？</label><select id="inPayer">${members.map(m => `<option value="${m.id}">${m.name}</option>`).join('')}</select></div>` : ''}
       <div class="field"><label>分類</label><div class="chips" id="catChips">${catChipsHTML('in')}</div></div>
       <div class="field"><label>詳細說明（選填）</label><input id="inDesc" placeholder="例如：鐵板燒、七月月費"></div>
+      <div class="field"><label>日期</label><input id="inDate" type="date" value="${todayISO()}"></div>
       <div class="field"><label>金額 (NT$)</label>${keypadHTML()}</div>
       <button class="btn" onclick="addLedgerRecord()">記一筆</button>`;
       }
@@ -1722,7 +1735,7 @@
         });
         if (tp <= 0) { toast('請輸入先付金額'); return; }
         if (Math.abs(tp - ts) > 0.01) { toast(`先付合計 ${fmt(tp)} ≠ 支出合計 ${fmt(ts)}`); return; }
-        expenses.push({ id: nextExpenseId++, cat, desc, amount: tp, mode: 'exact', paid, spent, payer: 0, splitters: [], date: today() });
+        expenses.push({ id: nextExpenseId++, cat, desc, amount: tp, mode: 'exact', paid, spent, payer: 0, splitters: [], date: dateFromInput() });
       } else if (mode === 'random') {
         // 🎲 隨機抽 N 個人一起買單（均攤）
         const amt = Math.round(evalAmt(amtStr));
@@ -1740,7 +1753,7 @@
           [pool[i], pool[j]] = [pool[j], pool[i]];
         }
         const losers = pool.slice(0, drawN);
-        expenses.push({ id: nextExpenseId++, cat, desc, amount: amt, mode: 'random', payer, candidates: cands, losers, loser: losers[0], revealed: revealNow, splitters: [], date: today() });
+        expenses.push({ id: nextExpenseId++, cat, desc, amount: amt, mode: 'random', payer, candidates: cands, losers, loser: losers[0], revealed: revealNow, splitters: [], date: dateFromInput() });
         save(); closeSheet(); render();
         const names = losers.map(id => memberById(id)?.name || '?').join('、');
         toast(revealNow ? `🎲 抽中 ${names} 買單！` : '🎲 已抽籤，到結算頁開獎');
@@ -1751,7 +1764,7 @@
         const splitters = [...document.querySelectorAll('#chips .chip.on')].map(c => +c.dataset.id);
         if (!amt || amt <= 0) { toast('請輸入有效金額'); return; }
         if (!splitters.length) { toast('至少選一位分攤者'); return; }
-        expenses.push({ id: nextExpenseId++, cat, desc, amount: amt, payer, splitters, date: today() });
+        expenses.push({ id: nextExpenseId++, cat, desc, amount: amt, payer, splitters, date: dateFromInput() });
       }
       save(); closeSheet(); toast('已記帳 ✓'); render();
     }
@@ -1763,7 +1776,7 @@
       const amt = Math.round(evalAmt(amtStr));
       if (!amt || amt <= 0) { toast('請輸入有效金額'); return; }
       const payer = (isFund && kind === 'in') ? +document.getElementById('inPayer').value : 0;
-      expenses.push({ id: nextExpenseId++, cat, desc, amount: amt, kind, payer, splitters: [], date: today() });
+      expenses.push({ id: nextExpenseId++, cat, desc, amount: amt, kind, payer, splitters: [], date: dateFromInput() });
       save(); closeSheet(); toast('已記帳 ✓'); render();
     }
 
