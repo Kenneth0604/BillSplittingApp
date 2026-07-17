@@ -776,8 +776,11 @@
   <div class="phone">
     <div class="screen">
       <div class="navbar">
-        <div class="project-pill" id="projectPill" onclick="openProjectSheet()">
-          <span>📁</span><span id="projectName">專案</span><span class="chev">▾</span>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="project-pill" id="projectPill" onclick="openProjectSheet()">
+            <span>📁</span><span id="projectName">專案</span><span class="chev">▾</span>
+          </div>
+          <div class="project-pill" id="userPill" onclick="openAuthSheet()">👤 登入</div>
         </div>
         <h1 id="navTitle">記記</h1>
         <div class="sub" id="navSub"></div>
@@ -1322,6 +1325,7 @@
     /* ---------- 留言區 ---------- */
     const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     function chatName() {
+      if (authUser) return authUser.nickname; // 登入後以帳號暱稱為準
       let n = '';
       try { n = localStorage.getItem('chatName') || ''; } catch (e) { }
       return n;
@@ -1346,18 +1350,18 @@
       }
       html += `</div>
         <div class="chat-input">
-          <input id="chatWho" placeholder="名字" maxlength="8" value="${esc(chatName())}">
-          <input id="chatText" placeholder="留言⋯" maxlength="200" onkeydown="if(event.key==='Enter')addChat()">
+          ${authUser ? '' : `<input id="chatWho" placeholder="名字" maxlength="8" value="${esc(chatName())}">`}
+          <input id="chatText" placeholder="${authUser ? `以 ${esc(authUser.nickname)} 的身分留言⋯` : '留言⋯'}" maxlength="200" onkeydown="if(event.key==='Enter')addChat()">
           <button class="chat-send" onclick="addChat()">送出</button>
         </div>`;
       return html;
     }
     function addChat() {
-      const name = document.getElementById('chatWho').value.trim();
+      const name = authUser ? authUser.nickname : document.getElementById('chatWho').value.trim();
       const text = document.getElementById('chatText').value.trim();
       if (!name) { toast('請填名字'); return; }
       if (!text) { toast('請輸入留言'); return; }
-      try { localStorage.setItem('chatName', name); } catch (e) { }
+      if (!authUser) { try { localStorage.setItem('chatName', name); } catch (e) { } }
       const d = new Date();
       const hh = String(d.getHours()).padStart(2, '0'), mm = String(d.getMinutes()).padStart(2, '0');
       if (!proj().chats) proj().chats = [];
@@ -1817,10 +1821,79 @@
         }
       } finally { pulling = false; }
     }
+    /* ---------- 帳號系統（Supabase Auth，Email＋密碼） ---------- */
+    let authUser = null; // { id, email, nickname }
+    function setAuthUser(u) {
+      authUser = u ? {
+        id: u.id, email: u.email,
+        nickname: (u.user_metadata && u.user_metadata.nickname) || (u.email || '').split('@')[0],
+      } : null;
+      const el = document.getElementById('userPill');
+      if (el) el.textContent = authUser ? `👤 ${authUser.nickname}` : '👤 登入';
+      if (currentPage === 'expenses') render(); // 更新留言區的身分顯示
+    }
+    async function initAuth() {
+      try {
+        const { data: { session } } = await sb.auth.getSession();
+        setAuthUser(session && session.user);
+        sb.auth.onAuthStateChange((_e, s) => setAuthUser(s && s.user));
+      } catch (e) { }
+    }
+    function openAuthSheet() {
+      if (!cloudOn()) { toast('登入功能需要先設定 Supabase 雲端'); return; }
+      const body = document.getElementById('sheetBody');
+      if (authUser) {
+        document.getElementById('sheetTitle').textContent = '我的帳號';
+        body.innerHTML = `
+          <div class="card"><div class="row">
+            <div class="avatar" style="background:#007aff">${initials(authUser.nickname)}</div>
+            <div class="grow"><div class="title">${esc(authUser.nickname)}</div>
+              <div class="detail">${esc(authUser.email)}</div></div>
+          </div></div>
+          <button class="btn gray" onclick="doLogout()">登出</button>`;
+      } else {
+        document.getElementById('sheetTitle').textContent = '登入／註冊';
+        body.innerHTML = `
+          <div class="field"><label>Email</label><input id="authEmail" type="email" placeholder="you@example.com"></div>
+          <div class="field"><label>密碼（至少 6 碼）</label><input id="authPw" type="password" placeholder="••••••"></div>
+          <div class="field"><label>暱稱（註冊時使用，留言會顯示這個名字）</label><input id="authNick" maxlength="8" placeholder="例如：67哥"></div>
+          <button class="btn" onclick="doLogin()">登入</button>
+          <div style="height:10px"></div>
+          <button class="btn gray" onclick="doSignup()">還沒有帳號？註冊</button>`;
+      }
+      document.getElementById('mask').classList.add('open');
+      document.getElementById('sheet').classList.add('open');
+    }
+    async function doLogin() {
+      const email = document.getElementById('authEmail').value.trim();
+      const pw = document.getElementById('authPw').value;
+      if (!email || !pw) { toast('請填 Email 和密碼'); return; }
+      const { error } = await sb.auth.signInWithPassword({ email, password: pw });
+      if (error) { toast('登入失敗：' + error.message); return; }
+      closeSheet(); toast('歡迎回來！');
+    }
+    async function doSignup() {
+      const email = document.getElementById('authEmail').value.trim();
+      const pw = document.getElementById('authPw').value;
+      const nickname = document.getElementById('authNick').value.trim();
+      if (!email || !pw) { toast('請填 Email 和密碼'); return; }
+      if (pw.length < 6) { toast('密碼至少 6 碼'); return; }
+      if (!nickname) { toast('請填暱稱'); return; }
+      const { data: d, error } = await sb.auth.signUp({ email, password: pw, options: { data: { nickname } } });
+      if (error) { toast('註冊失敗：' + error.message); return; }
+      if (d && d.user && !d.session) { closeSheet(); toast('請到信箱點確認信後再登入'); return; }
+      closeSheet(); toast(`註冊成功，嗨 ${nickname}！`);
+    }
+    async function doLogout() {
+      try { await sb.auth.signOut(); } catch (e) { }
+      closeSheet(); toast('已登出');
+    }
+
     if (cloudOn()) {
       setInterval(pullAll, 8000);           // 每 8 秒拉一次
       window.addEventListener('focus', pullAll); // 切回視窗立即同步
       pullAll();
+      initAuth();
     }
 
     render();
