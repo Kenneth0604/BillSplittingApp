@@ -51,32 +51,8 @@
       position: relative;
     }
 
-    .notch {
-      position: absolute;
-      top: 12px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 120px;
-      height: 34px;
-      background: #000;
-      border-radius: 20px;
-      z-index: 100;
-    }
-
-    .statusbar {
-      height: 54px;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      padding: 0 30px 6px;
-      font-size: 15px;
-      font-weight: 600;
-      color: #000;
-      flex-shrink: 0;
-    }
-
     .navbar {
-      padding: 8px 20px 12px;
+      padding: max(28px, env(safe-area-inset-top)) 20px 12px;
       background: #f2f2f7;
       flex-shrink: 0;
     }
@@ -637,6 +613,105 @@
       white-space: nowrap;
     }
 
+    /* 留言區 */
+    .chat-card {
+      padding: 10px 12px;
+      max-height: 320px;
+      overflow-y: auto;
+    }
+
+    .chat-empty {
+      text-align: center;
+      color: #8e8e93;
+      font-size: 13px;
+      padding: 18px 0;
+    }
+
+    .chat-row {
+      display: flex;
+      margin: 6px 0;
+    }
+
+    .chat-row.mine {
+      justify-content: flex-end;
+    }
+
+    .chat-bubble {
+      max-width: 75%;
+      background: #e5e5ea;
+      border-radius: 16px;
+      padding: 8px 12px;
+      font-size: 14px;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    .chat-row.mine .chat-bubble {
+      background: #007aff;
+      color: #fff;
+    }
+
+    .chat-name {
+      font-size: 11px;
+      font-weight: 700;
+      color: #8e8e93;
+      margin-bottom: 2px;
+    }
+
+    .chat-row.mine .chat-time {
+      color: rgba(255, 255, 255, .7);
+    }
+
+    .chat-time {
+      font-size: 10px;
+      color: #8e8e93;
+      margin-top: 3px;
+      text-align: right;
+    }
+
+    .chat-input {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .chat-input input {
+      border: none;
+      border-radius: 12px;
+      padding: 11px 12px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      background: #fff;
+    }
+
+    .chat-input input#chatWho {
+      width: 76px;
+      flex-shrink: 0;
+    }
+
+    .chat-input input#chatText {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .chat-send {
+      border: none;
+      border-radius: 12px;
+      background: #007aff;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 0 16px;
+      cursor: pointer;
+      font-family: inherit;
+      flex-shrink: 0;
+    }
+
+    .chat-send:active {
+      opacity: .75;
+    }
+
     .toast {
       position: absolute;
       top: 70px;
@@ -692,10 +767,6 @@
       .screen {
         border-radius: 0;
       }
-
-      .notch {
-        display: none;
-      }
     }
   </style>
 </head>
@@ -704,9 +775,6 @@
 
   <div class="phone">
     <div class="screen">
-      <div class="notch"></div>
-      <div class="statusbar"><span>9:41</span><span>📶 🔋</span></div>
-
       <div class="navbar">
         <div class="project-pill" id="projectPill" onclick="openProjectSheet()">
           <span>📁</span><span id="projectName">專案</span><span class="chev">▾</span>
@@ -785,18 +853,40 @@
     function defaultData() {
       return {
         projects: [{
-          id: 1, name: '週末小旅行', type: 'split',
+          id: 1, name: '67元快樂研究小組', type: 'split',
           members: [
-            { id: 1, name: '小明' },
-            { id: 2, name: '阿華' },
-            { id: 3, name: 'Kenny' },
+            { id: 1, name: '阿肥' },
+            { id: 2, name: '67哥' },
+            { id: 3, name: '胖虎' },
           ],
+          cats: { out: [...CATS.out, '🐸 智商稅'], in: [...CATS.in] },
           expenses: [
-            { id: 1, cat: '🍽️ 晚餐', desc: '火鍋', amount: 1800, payer: 1, splitters: [1, 2, 3], date: '7/15' },
-            { id: 2, cat: '🚕 交通', desc: '計程車', amount: 360, payer: 2, splitters: [1, 2], date: '7/15' },
-            { id: 3, cat: '🎮 娛樂', desc: 'KTV', amount: 2400, payer: 3, splitters: [1, 2, 3], date: '7/16' },
+            // 均分示範
+            { id: 1, cat: '🧋 飲料', desc: '請全員喝 67 嵐（大杯全糖去冰）', amount: 670, payer: 1, splitters: [1, 2, 3], date: '7/15' },
+            // 自訂分類示範（自己付自己分，純紀念）
+            { id: 2, cat: '🐸 智商稅', desc: '會發光的青蛙帽（戴一次就壞）', amount: 67, payer: 2, splitters: [2], date: '7/15' },
+            // 特定付款示範：67哥堅持只吃 67 元
+            {
+              id: 3, cat: '🍽️ 晚餐', desc: '深夜雞排懺悔餐', amount: 667, mode: 'exact',
+              paid: { 2: 667 }, spent: { 1: 500, 2: 67, 3: 100 }, payer: 0, splitters: [], date: '7/16'
+            },
+            // 隨機付款（已開獎）示範
+            {
+              id: 4, cat: '🎮 娛樂', desc: '夾娃娃機夾到懷疑人生', amount: 676, mode: 'random',
+              payer: 3, candidates: [1, 2, 3], loser: 2, revealed: true, splitters: [], date: '7/16'
+            },
+            // 隨機付款（未開獎）示範：去結算頁按「開獎」
+            {
+              id: 5, cat: '📦 其他', desc: '神秘的 6767 元支出（不要問）', amount: 6767, mode: 'random',
+              payer: 1, candidates: [1, 2, 3], loser: 3, revealed: false, splitters: [], date: '7/17'
+            },
           ],
-          nextMemberId: 4, nextExpenseId: 4,
+          chats: [
+            { name: '阿肥', text: '誰吃了我 500 的雞排？自首從寬', time: '7/16 21:06' },
+            { name: '67哥', text: '我只出 67，多一塊都是對我的侮辱', time: '7/16 21:07' },
+            { name: '胖虎', text: '那筆 6767 先說好，開獎抽中我就退出小組', time: '7/17 09:41' },
+          ],
+          nextMemberId: 4, nextExpenseId: 6,
         }],
         currentProjectId: 1, nextProjectId: 2,
       };
@@ -819,6 +909,7 @@
       data.projects.forEach(p => {
         if (!p.type) p.type = 'split';
         if (!p.cats) p.cats = { out: [...CATS.out], in: [...CATS.in] };
+        if (!p.chats) p.chats = [];
       });
       if (!data.projects.some(p => p.id === data.currentProjectId)) data.currentProjectId = data.projects[0].id;
     }
@@ -1022,7 +1113,7 @@
       document.getElementById('fab').style.display = (currentPage === 'settle' || currentPage === 'members') ? 'none' : 'flex';
 
       const c = document.getElementById('content');
-      if (currentPage === 'expenses') c.innerHTML = renderExpensesPage(type);
+      if (currentPage === 'expenses') c.innerHTML = renderExpensesPage(type) + chatHTML();
       if (currentPage === 'members') c.innerHTML = renderMembersPage(type);
       if (currentPage === 'settle') c.innerHTML = renderSettlePage(type);
     }
@@ -1228,6 +1319,55 @@
     }
 
     /* ---------- 操作 ---------- */
+    /* ---------- 留言區 ---------- */
+    const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    function chatName() {
+      let n = '';
+      try { n = localStorage.getItem('chatName') || ''; } catch (e) { }
+      return n;
+    }
+    function chatHTML() {
+      const chats = proj().chats || [];
+      let html = `<div class="section-title">💬 留言區</div><div class="card chat-card">`;
+      if (!chats.length) {
+        html += `<div class="chat-empty">還沒有留言，說點什麼吧</div>`;
+      } else {
+        const me = chatName();
+        chats.forEach(c => {
+          const mine = me && c.name === me;
+          html += `<div class="chat-row ${mine ? 'mine' : ''}">
+            <div class="chat-bubble">
+              ${mine ? '' : `<div class="chat-name">${esc(c.name)}</div>`}
+              <div>${esc(c.text)}</div>
+              <div class="chat-time">${esc(c.time)}</div>
+            </div>
+          </div>`;
+        });
+      }
+      html += `</div>
+        <div class="chat-input">
+          <input id="chatWho" placeholder="名字" maxlength="8" value="${esc(chatName())}">
+          <input id="chatText" placeholder="留言⋯" maxlength="200" onkeydown="if(event.key==='Enter')addChat()">
+          <button class="chat-send" onclick="addChat()">送出</button>
+        </div>`;
+      return html;
+    }
+    function addChat() {
+      const name = document.getElementById('chatWho').value.trim();
+      const text = document.getElementById('chatText').value.trim();
+      if (!name) { toast('請填名字'); return; }
+      if (!text) { toast('請輸入留言'); return; }
+      try { localStorage.setItem('chatName', name); } catch (e) { }
+      const d = new Date();
+      const hh = String(d.getHours()).padStart(2, '0'), mm = String(d.getMinutes()).padStart(2, '0');
+      if (!proj().chats) proj().chats = [];
+      proj().chats.push({ name, text, time: `${today()} ${hh}:${mm}` });
+      if (proj().chats.length > 200) proj().chats = proj().chats.slice(-200); // 最多留 200 則
+      save(); render();
+      // 捲到留言區底部
+      setTimeout(() => { const c = document.getElementById('content'); if (c) c.scrollTop = c.scrollHeight; }, 50);
+    }
+
     function delExpense(id) {
       const e = expenses.find(x => x.id === id);
       if (!confirm(`確定刪除「${e?.desc || e?.cat || '這筆紀錄'}」（${fmt(e?.amount || 0)}）？`)) return;
