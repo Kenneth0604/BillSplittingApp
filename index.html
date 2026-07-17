@@ -781,6 +781,7 @@
             <span>📁</span><span id="projectName">專案</span><span class="chev">▾</span>
           </div>
           <div style="display:flex;gap:8px">
+            <div class="project-pill" id="refreshBtn" onclick="manualRefresh()">🔄</div>
             <div class="project-pill" onclick="openHelpSheet()">❓</div>
             <div class="project-pill" id="userPill" onclick="openAuthSheet()">👤 登入</div>
           </div>
@@ -2014,6 +2015,28 @@
       window.addEventListener('focus', pullAll); // 切回視窗立即同步
       pullAll();
       initAuth();
+    }
+
+    /* ---------- 手動重新整理 ---------- */
+    let refreshing = false;
+    async function manualRefresh() {
+      if (refreshing) return;
+      refreshing = true;
+      const btn = document.getElementById('refreshBtn');
+      if (btn) btn.style.opacity = '.4';
+      try {
+        if (cloudOn()) {
+          await pullAll();
+          await syncMyProjects();
+          toast('☁ 已重新整理');
+        } else {
+          toast('已重新整理（未設定雲端）');
+        }
+        render();
+      } finally {
+        refreshing = false;
+        if (btn) btn.style.opacity = '';
+      }
     }
 
     /* ---------- 使用說明（Help） ---------- */
