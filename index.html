@@ -1700,7 +1700,7 @@
     <button class="btn gray" onclick="joinByCode()">☁ 用代碼加入</button>
     ${isAdmin() ? `<div class="section-title">🛡️ 管理員</div>
     <button class="btn gray" onclick="openAdminSheet()">檢視所有雲端專案</button>` : ''}
-    <div class="exact-sum" style="text-align:center">${cloudOn() ? '☁ 雲端同步已啟用' : '尚未設定雲端 — 專案旁 ☁ 可上雲分享（見部署指南）'}</div>`;
+    <div class="exact-sum" style="text-align:center">${cloudOn() ? (authUser ? '☁ 雲端同步已啟用' : '☁ 雲端已設定 — 登入後即可上雲／加入專案') : '尚未設定雲端 — 見部署指南'}</div>`;
       body.innerHTML = html;
       document.getElementById('mask').classList.add('open');
       document.getElementById('sheet').classList.add('open');
@@ -1767,6 +1767,7 @@
 
     async function uploadProject(id) {
       if (!cloudOn()) { toast('尚未設定雲端（見部署指南）'); return; }
+      if (!authUser) { toast('請先登入才能上雲'); openAuthSheet(); return; }
       const p = data.projects.find(x => x.id === id);
       const code = genCode();
       const { data: row, error } = await sb.from('shared_projects')
@@ -1798,6 +1799,7 @@
     }
     async function joinProject(code) {
       if (!cloudOn()) { toast('尚未設定雲端（見部署指南）'); return; }
+      if (!authUser) { toast('請先登入才能加入雲端專案'); openAuthSheet(); return; }
       if (!code) { toast('請輸入分享代碼'); return; }
       const exist = data.projects.find(p => p.cloud && p.cloud.code === code);
       if (exist) {
@@ -1805,8 +1807,10 @@
         save(); closeSheet(); switchTab('expenses');
         toast(`已切換到「${exist.name}」`); return;
       }
-      const { data: row, error } = await sb.from('shared_projects').select('*').eq('code', code).single();
-      if (error || !row) { toast('找不到此代碼'); return; }
+      // 透過後端函式驗證代碼並登記成員（RLS：非成員讀不到專案）
+      const { data: rows, error } = await sb.rpc('join_project', { p_code: code });
+      const row = rows && rows[0];
+      if (error || !row) { toast('加入失敗：' + (error ? error.message : '找不到此代碼')); return; }
       const p = row.data;
       p.id = data.nextProjectId++;
       p.cloud = { code, ts: row.updated_at };
