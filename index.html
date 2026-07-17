@@ -1336,7 +1336,7 @@
       if (!n) { try { n = localStorage.getItem('chatName') || ''; } catch (e) { } }
       return n;
     }
-    // 第一次進入專案時，詢問要在此專案顯示的名稱（預設＝帳號的使用者名稱）
+    // 只在「第一次加入雲端專案」時詢問顯示名稱（切換/建立不再詢問；想改名直接改留言區的名字欄）
     function ensureProjNick() {
       const p = proj();
       if (p.type === 'personal') return;
@@ -1743,7 +1743,6 @@
       data.currentProjectId = id; save(); closeSheet();
       switchTab(currentPage);
       toast(`已切換到「${proj().name}」`);
-      ensureProjNick();
     }
     function addProject() {
       const name = document.getElementById('inProject').value.trim();
@@ -1754,7 +1753,7 @@
       data.currentProjectId = p.id;
       save(); closeSheet();
       if (newProjType === 'personal') { toast(`已建立「${name}」`); switchTab('expenses'); }
-      else { toast(`已建立「${name}」，先去新增成員吧`); switchTab('members'); ensureProjNick(); }
+      else { toast(`已建立「${name}」，先去新增成員吧`); switchTab('members'); }
     }
     function renameProject(id) {
       const p = data.projects.find(x => x.id === id);
