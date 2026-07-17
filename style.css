@@ -60,16 +60,39 @@ body {
 .project-pill {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   margin-bottom: 8px;
   background: #e5e5ea;
-  padding: 6px 14px;
+  height: 36px;
+  padding: 0 14px;
   border-radius: 18px;
   font-size: 14px;
   font-weight: 700;
   color: #3a3a3c;
   cursor: pointer;
   user-select: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* 左側專案 pill 可縮、名稱過長以 … 收尾 */
+#projectPill {
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+#projectName {
+  max-width: 34vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 純圖示按鈕：固定正方形，跟其他 pill 同高 */
+.icon-pill {
+  width: 36px;
+  padding: 0;
 }
 
 .project-pill:active {
@@ -214,16 +237,22 @@ body {
 .row .title {
   font-size: 16px;
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .row .detail {
   font-size: 13px;
   color: #8e8e93;
   margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .amount {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -339,9 +368,9 @@ body {
   background: none;
   border: none;
   color: #ff3b30;
-  font-size: 20px;
+  font-size: 18px;
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 4px 4px;
   flex-shrink: 0;
 }
 
