@@ -5,6 +5,12 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+html,
+body {
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Helvetica Neue", sans-serif;
   background: #d8dce3;
@@ -144,6 +150,7 @@ body {
 .content {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 4px 16px 100px;
 }
 
@@ -503,9 +510,15 @@ body {
 
 .keypad {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 8px;
   margin-top: 10px;
+}
+
+.key.op {
+  background: #ffe9d6;
+  color: #ff9500;
+  font-size: 20px;
 }
 
 .key {

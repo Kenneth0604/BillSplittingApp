@@ -537,6 +537,17 @@ function openSheet() {
 let amtStr = '';
 let cellStr = {};      // 特定付款各格金額（key: 'pay_成員id' / 'spend_成員id'）
 let activeKey = null;  // 目前輸入中的格子
+// 0..n-1 的均勻整數亂數（crypto 等級、以拒絕取樣消除模數偏差）
+export function randInt(n) {
+  if (n <= 1) return 0;
+  const g = (typeof crypto !== 'undefined' && crypto.getRandomValues) ? crypto : null;
+  if (!g) return Math.floor(Math.random() * n);
+  const limit = Math.floor(4294967296 / n) * n;
+  const buf = new Uint32Array(1);
+  let x;
+  do { g.getRandomValues(buf); x = buf[0]; } while (x >= limit);
+  return x % n;
+}
 function keypadHTML(withDisplay = true) {
   amtStr = ''; activeKey = null;
   const keys = ['1', '2', '3', '/', '4', '5', '6', '*', '7', '8', '9', '-', '.', '0', '⌫', '+'];
@@ -772,10 +783,10 @@ function addExpense() {
     if (!amt || amt <= 0) { toast('請輸入有效金額'); return; }
     if (cands.length < 2) { toast('至少選 2 位參加抽籤'); return; }
     if (drawN >= cands.length) { toast('抽的人數要少於參加人數'); return; }
-    // Fisher–Yates 洗牌後取前 N 個
+    // Fisher–Yates 洗牌後取前 N 個（用密碼學等級亂數，避免任何可預測性）
     const pool = [...cands];
     for (let i = pool.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = randInt(i + 1);
       [pool[i], pool[j]] = [pool[j], pool[i]];
     }
     const losers = pool.slice(0, drawN);
