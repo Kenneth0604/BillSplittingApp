@@ -456,6 +456,20 @@ body {
   color: #000;
 }
 
+/* 日期欄：WebKit 的 date input 有內建最小寬度，會撐出畫面 */
+.field input[type="date"] {
+  min-width: 0;
+  max-width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+  display: block;
+}
+
+.field input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+}
+
 .chips {
   display: flex;
   flex-wrap: wrap;
