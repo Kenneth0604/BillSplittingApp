@@ -138,7 +138,7 @@ git commit -m "說明這次改了什麼"
 git push                       # 約 1 分鐘後 GitHub Pages 自動更新
 ```
 
-改了 `src/*.js` 記得把 index.html 的 `main.js?v=N` 版本號 +1（防瀏覽器快取舊模組）。
+改完程式在 commit 前跑 `node tools/bump.mjs`——會把 index.html 和**所有模組 import** 的 `?v=N` 一起 +1，徹底避免「一半新一半舊」的快取問題（測試會自動讀取目前版本）。
 
 部署狀態看 repo 的 **Actions** 分頁（pages build and deployment）。
 

@@ -22,12 +22,14 @@ globalThis.prompt = (m,d) => d;
 const gid = id => document.getElementById(id);
 const chipOn = (attrs) => [newEl({dataset:attrs})];
 
+import { readFileSync } from 'fs';
+const V = readFileSync(new URL('../index.html', import.meta.url), 'utf8').match(/main\.js\?v=(\d+)/)[1];
 const base = new URL('../src/', import.meta.url).href;
-await import(base + 'main.js');
-const ui = await import(base + 'ui.js');
-const store = await import(base + 'store.js');
-const calc = await import(base + 'calc.js');
-const cloud = await import(base + 'cloud.js');
+await import(`${base}main.js?v=${V}`);
+const ui = await import(`${base}ui.js?v=${V}`);
+const store = await import(`${base}store.js?v=${V}`);
+const calc = await import(`${base}calc.js?v=${V}`);
+const cloud = await import(`${base}cloud.js?v=${V}`);
 
 let pass = 0, fail = 0;
 function t(name, cond) { cond ? (pass++, console.log('✓', name)) : (fail++, console.log('✗', name)); }

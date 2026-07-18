@@ -1,9 +1,11 @@
 // 純計算單元測試：node test/calc.test.mjs
 globalThis.localStorage = { getItem: () => null, setItem: () => { } };
 globalThis.window = globalThis;
-const store = await import(new URL('../src/store.js', import.meta.url).href);
+import { readFileSync } from 'fs';
+const V = readFileSync(new URL('../index.html', import.meta.url), 'utf8').match(/main\.js\?v=(\d+)/)[1];
+const store = await import(new URL(`../src/store.js?v=${V}`, import.meta.url).href);
 store.load();
-const calc = await import(new URL('../src/calc.js', import.meta.url).href);
+const calc = await import(new URL(`../src/calc.js?v=${V}`, import.meta.url).href);
 
 let pass = 0, fail = 0;
 const t = (name, cond) => cond ? (pass++, console.log('✓', name)) : (fail++, console.log('✗', name));
