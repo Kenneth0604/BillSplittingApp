@@ -774,6 +774,73 @@ body {
   margin-left: 6px;
 }
 
+/* 結算轉帳列（橫式：A ─金額→ B） */
+.transfer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 14px;
+  border-bottom: .5px solid rgba(0, 0, 0, .08);
+  font-size: 15px;
+}
+
+.transfer:last-child {
+  border-bottom: none;
+}
+
+.transfer .who {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 72px;
+  flex-shrink: 0;
+}
+
+.transfer .who-name {
+  font-size: 13px;
+  font-weight: 700;
+  max-width: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arrow-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  padding: 0 4px;
+}
+
+.arrow-amt {
+  font-size: 16px;
+  font-weight: 800;
+  color: #007aff;
+  margin-bottom: 4px;
+  white-space: nowrap;
+}
+
+.arrow-line {
+  width: 100%;
+  height: 2px;
+  background: #b9bec6;
+  border-radius: 1px;
+  position: relative;
+}
+
+.arrow-line::after {
+  content: '';
+  position: absolute;
+  right: -1px;
+  top: -4px;
+  border-left: 8px solid #b9bec6;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+}
+
 .toast {
   position: absolute;
   top: 70px;

@@ -15,6 +15,7 @@ cloud.hooks.render = ui.render;
 window.app = {
   openAdminUsersSheet: ui.openAdminUsersSheet,
   adminDeleteUser: ui.adminDeleteUser,
+  copySettlement: ui.copySettlement,
   openProfileSheet: ui.openProfileSheet,
   pickAvatar: ui.pickAvatar,
   saveProfile: ui.saveProfile,

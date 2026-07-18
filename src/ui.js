@@ -242,14 +242,17 @@ function renderSettlePage(type) {
     plan.forEach(t => {
       const f = memberById(t.from), to = memberById(t.to);
       html += `<div class="transfer">
-    <div class="avatar" style="background:${colorOf(t.from)};width:34px;height:34px;font-size:14px">${initials(f.name)}</div>
-    <b>${f.name}</b><span class="arrow">→</span>
-    <div class="avatar" style="background:${colorOf(t.to)};width:34px;height:34px;font-size:14px">${initials(to.name)}</div>
-    <b>${to.name}</b>
-    <span class="amt">${fmt(t.amt)}</span>
+    <div class="who">${memberAvatar(f)}<div class="who-name">${esc(f?.name || '?')}</div></div>
+    <div class="arrow-wrap">
+      <div class="arrow-amt">${fmt(t.amt)}</div>
+      <div class="arrow-line"></div>
+    </div>
+    <div class="who">${memberAvatar(to)}<div class="who-name">${esc(to?.name || '?')}</div></div>
   </div>`;
     });
-    return html + `</div>` + pies + `<div style="height:14px"></div><button class="btn gray" onclick="app.markSettled()">✓ 標記全部已結清</button>`;
+    return html + `</div>
+  <button class="btn gray" onclick="app.copySettlement()">📋 複製結算結果</button>` + pies +
+      `<div style="height:14px"></div><button class="btn gray" onclick="app.markSettled()">✓ 標記全部已結清</button>`;
   }
 
   const s = ledgerStats();
@@ -478,6 +481,33 @@ function delMember(id) {
   const m = memberById(id);
   if (!confirm(`確定刪除成員「${m?.name || '?'}」？`)) return;
   proj().members = proj().members.filter(x => x.id !== id); save(); toast('已刪除成員'); render();
+}
+function copySettlement() {
+  const plan = settlements();
+  if (!plan.length) { toast('目前沒有需要轉帳的款項'); return; }
+  const lines = [`💸 ${proj().name}｜結算結果`];
+  plan.forEach(t => {
+    lines.push(`${memberById(t.from)?.name || '?'} → ${memberById(t.to)?.name || '?'}  ${fmt(t.amt)}`);
+  });
+  lines.push(`（共 ${plan.length} 筆轉帳就能結清）`);
+  const text = lines.join('\n');
+  const done = () => toast('已複製，貼給大家吧 📋');
+  if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+  } else {
+    fallbackCopy(text, done);
+  }
+}
+function fallbackCopy(text, done) {
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    done();
+  } catch (e) { toast('複製失敗，請截圖分享'); }
 }
 function markSettled() {
   if (!confirm('確定標記全部已結清？所有帳目將被清空，此動作無法復原')) return;
@@ -1247,7 +1277,7 @@ function openHelpSheet() {
 
 
 export {
-  toast, render, openAdminUsersSheet, adminDeleteUser,
+  toast, render, openAdminUsersSheet, adminDeleteUser, copySettlement,
   openProfileSheet, pickAvatar, saveProfile, adminToggleAdmin,
   openMemberEditSheet, pickMemberAvatar, clearMemberAvatar, saveMemberEdit,
   switchTab, selectProjType, selectMode, selectReveal, selectKind, revealRandom, openEditSheet, focusCell, delMember, delExpense, closeSheet, switchProject, selectCat, renameProject, openSheet, openProjectSheet, openMemberSheet, openHelpSheet, openCatSheet, openAuthSheet, openAdminSheet, markSettled, manualRefresh, kp, joinProject, joinByCode, fillEqualSpend, doSignup, doLogout, doLogin, delProject, delCat, cloudAction, changeNick, addProject, addMember, addLedgerRecord, addExpense, addChat, addCat,
