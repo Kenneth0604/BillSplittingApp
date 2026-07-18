@@ -1,17 +1,17 @@
 // UI 層：渲染、表單、事件處理（依賴 store / calc / cloud）
 import {
   data, proj, save, getCats, projKey, CATS, TYPE_INFO, CAT_COLORS,
-} from './store.js?v=9';
+} from './store.js?v=10';
 import {
   fmt, memberById, colorOf, initials, today, todayISO, esc, dateToISO,
   balances, settlements, ledgerStats,
   expenseBreakdown, toItems, memberPaidBreakdown, memberShareBreakdown, depositBreakdown,
   OP_LABEL, dispExpr, evalAmt, editAmt, losersOf,
-} from './calc.js?v=9';
+} from './calc.js?v=10';
 import {
   sb, cloudOn, authUser, isAdmin, setAuthUser, pullAll, syncMyProjects,
   genCode, projPayload, ADMIN_EMAILS, refreshAdminFlag,
-} from './cloud.js?v=9';
+} from './cloud.js?v=10';
 
 let currentPage = 'expenses';
 
@@ -90,7 +90,7 @@ function render() {
 function renderExpensesPage(type) {
   let html = '';
   if (type === 'split') {
-    const total = proj().expenses.reduce((s, e) => s + e.amount, 0);
+    const total = proj().expenses.reduce((s, e) => s + (e.settle ? 0 : e.amount), 0);
     document.getElementById('navSub').textContent = `${proj().expenses.length} 筆支出`;
     html += `<div class="stat-card"><div class="label">總支出</div><div class="big">${fmt(total)}</div><div class="meta">${proj().members.length} 位成員 · ${proj().expenses.length} 筆帳目</div></div>`;
     if (!proj().expenses.length) return html + `<div class="empty"><div class="icon">🧾</div><p>還沒有任何支出<br>點右下角 ＋ 新增第一筆</p></div>`;
@@ -248,6 +248,7 @@ function renderSettlePage(type) {
       <div class="arrow-line"></div>
     </div>
     <div class="who">${memberAvatar(to)}<div class="who-name">${esc(to?.name || '?')}</div></div>
+    <button class="settle-btn" onclick="app.settleTransfer(${t.from}, ${t.to}, ${t.amt})">✓ 已付</button>
   </div>`;
     });
     return html + `</div>
@@ -481,6 +482,20 @@ function delMember(id) {
   const m = memberById(id);
   if (!confirm(`確定刪除成員「${m?.name || '?'}」？`)) return;
   proj().members = proj().members.filter(x => x.id !== id); save(); toast('已刪除成員'); render();
+}
+// 標記單筆轉帳已付清：記一筆「清償」抵銷（可在記記列表刪除反悔）
+function settleTransfer(from, to, amt) {
+  const f = memberById(from), b = memberById(to);
+  if (!f || !b) return;
+  if (!confirm(`確認 ${f.name} 已把 ${fmt(amt)} 付給 ${b.name}？\n（會記一筆清償紀錄，反悔可到記記刪除）`)) return;
+  proj().expenses.push({
+    id: proj().nextExpenseId++,
+    cat: '💸 清償', desc: `${f.name} 付給 ${b.name}`,
+    amount: amt, mode: 'exact', settle: true,
+    paid: { [from]: amt }, spent: { [to]: amt },
+    payer: 0, splitters: [], date: today(),
+  });
+  save(); toast(`✓ ${f.name} 已結清這筆`); render();
 }
 function copySettlement() {
   const plan = settlements();
@@ -1277,7 +1292,7 @@ function openHelpSheet() {
 
 
 export {
-  toast, render, openAdminUsersSheet, adminDeleteUser, copySettlement,
+  toast, render, openAdminUsersSheet, adminDeleteUser, copySettlement, settleTransfer,
   openProfileSheet, pickAvatar, saveProfile, adminToggleAdmin,
   openMemberEditSheet, pickMemberAvatar, clearMemberAvatar, saveMemberEdit,
   switchTab, selectProjType, selectMode, selectReveal, selectKind, revealRandom, openEditSheet, focusCell, delMember, delExpense, closeSheet, switchProject, selectCat, renameProject, openSheet, openProjectSheet, openMemberSheet, openHelpSheet, openCatSheet, openAuthSheet, openAdminSheet, markSettled, manualRefresh, kp, joinProject, joinByCode, fillEqualSpend, doSignup, doLogout, doLogin, delProject, delCat, cloudAction, changeNick, addProject, addMember, addLedgerRecord, addExpense, addChat, addCat,

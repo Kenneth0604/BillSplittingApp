@@ -1,5 +1,5 @@
 // 純計算與工具函式（只依賴 store）
-import { proj, COLORS } from './store.js?v=9';
+import { proj, COLORS } from './store.js?v=10';
 
 const fmt = n => 'NT$ ' + Math.round(n).toLocaleString('zh-Hant'); // 金額一律取整數顯示
 const memberById = id => proj().members.find(m => m.id === id);
@@ -70,6 +70,7 @@ function expenseBreakdown() {
   const isSplit = proj().type === 'split';
   const sums = {};
   proj().expenses.forEach(e => {
+    if (e.settle) return; // 清償紀錄不是消費，不進分類統計
     if (isSplit || e.kind === 'out') {
       const c = e.cat || '📦 其他';
       sums[c] = (sums[c] || 0) + e.amount;
@@ -85,6 +86,7 @@ function toItems(sums) {
 function memberPaidBreakdown() {
   const sums = {};
   proj().expenses.forEach(e => {
+    if (e.settle) return; // 清償不是代墊
     if (e.mode === 'random') {
       if (!e.revealed) return;
       const n = memberById(e.payer)?.name || '?';
@@ -105,6 +107,7 @@ function memberPaidBreakdown() {
 function memberShareBreakdown() {
   const sums = {};
   proj().expenses.forEach(e => {
+    if (e.settle) return; // 清償不是消費
     if (e.mode === 'random') {
       if (!e.revealed) return;
       const ls = losersOf(e);

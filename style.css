@@ -788,6 +788,23 @@ body {
   margin-left: 6px;
 }
 
+.settle-btn {
+  border: none;
+  border-radius: 10px;
+  background: #e8f8ee;
+  color: #34c759;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+
+.settle-btn:active {
+  opacity: .7;
+}
+
 /* 結算轉帳列（橫式：A ─金額→ B） */
 .transfer {
   display: flex;
