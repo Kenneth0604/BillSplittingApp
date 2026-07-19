@@ -1,5 +1,5 @@
 // 雲端層：Supabase 連線、同步、身分（依賴 store；UI 透過 hooks 注入）
-import { data, proj } from './store.js?v=10';
+import { data, proj } from './store.js?v=11';
 
 // UI 掛勾（main.js 接上 toast/render，避免循環相依）
 export const hooks = { toast: () => { }, render: () => { } };

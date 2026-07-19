@@ -1,17 +1,17 @@
 // UI 層：渲染、表單、事件處理（依賴 store / calc / cloud）
 import {
   data, proj, save, getCats, projKey, CATS, TYPE_INFO, CAT_COLORS,
-} from './store.js?v=10';
+} from './store.js?v=11';
 import {
   fmt, memberById, colorOf, initials, today, todayISO, esc, dateToISO,
   balances, settlements, ledgerStats,
   expenseBreakdown, toItems, memberPaidBreakdown, memberShareBreakdown, depositBreakdown,
   OP_LABEL, dispExpr, evalAmt, editAmt, losersOf,
-} from './calc.js?v=10';
+} from './calc.js?v=11';
 import {
   sb, cloudOn, authUser, isAdmin, setAuthUser, pullAll, syncMyProjects,
   genCode, projPayload, ADMIN_EMAILS, refreshAdminFlag,
-} from './cloud.js?v=10';
+} from './cloud.js?v=11';
 
 let currentPage = 'expenses';
 
@@ -71,8 +71,16 @@ function pageTitles() {
   };
 }
 
+// 雙人模式：多人分帳且剛好兩位成員
+function isDuoMode() {
+  return proj().type === 'split' && proj().members.length === 2;
+}
 function render() {
   const p = proj(), type = p.type;
+  const duo = isDuoMode();
+  const tabSettle = document.getElementById('tabSettle');
+  if (tabSettle) tabSettle.style.display = duo ? 'none' : 'flex';
+  if (duo && currentPage === 'settle') { switchTab('expenses'); return; }
   const titles = pageTitles();
   document.getElementById('tabLbl-expenses').textContent = titles.expenses;
   document.getElementById('tabLbl-settle').textContent = titles.settle;
@@ -91,11 +99,48 @@ function renderExpensesPage(type) {
   let html = '';
   if (type === 'split') {
     const total = proj().expenses.reduce((s, e) => s + (e.settle ? 0 : e.amount), 0);
+    if (isDuoMode()) {
+      const [m1, m2] = proj().members;
+      const bal = balances();
+      const meName = chatName();
+      const me = proj().members.find(m => m.name === meName) || null;
+      const other = me ? proj().members.find(m => m.id !== me.id) : null;
+      const net = bal[m1.id];
+      const amt = Math.abs(net);
+      let line, debtor = null, creditor = null;
+      if (amt < 0.01) {
+        line = '目前互不相欠 🎉';
+      } else {
+        debtor = net < -0.01 ? m1 : m2;
+        creditor = net < -0.01 ? m2 : m1;
+        if (me && debtor.id === me.id) line = `你欠 ${esc(creditor.name)}<br>${fmt(amt)}`;
+        else if (me && creditor.id === me.id) line = `${esc(debtor.name)} 欠你<br>${fmt(amt)}`;
+        else line = `${esc(debtor.name)} 欠 ${esc(creditor.name)}<br>${fmt(amt)}`;
+      }
+      document.getElementById('navSub').textContent =
+        `👥 雙人模式${other ? '｜與 ' + other.name : ''} · ${proj().expenses.length} 筆`;
+      html += `<div class="stat-card"><div class="label">👥 雙人模式 · ${esc(m1.name)} & ${esc(m2.name)}</div>
+    <div class="big" style="font-size:26px;line-height:1.35">${line}</div>
+    <div class="meta">總支出 ${fmt(total)}</div></div>`;
+      if (debtor) {
+        html += `<button class="btn gray" onclick="app.settleTransfer(${debtor.id}, ${creditor.id}, ${amt})">✓ 標記已結清（${esc(debtor.name)} 已付款）</button><div style="height:12px"></div>`;
+      }
+      if (!proj().expenses.length) return html + `<div class="empty"><div class="icon">🧾</div><p>還沒有任何支出<br>點右下角 ＋ 新增第一筆</p></div>`;
+      html += `<div class="card">`;
+      [...proj().expenses].reverse().forEach(e => { html += duoRow(e); });
+      return html + `</div>`;
+    }
     document.getElementById('navSub').textContent = `${proj().expenses.length} 筆支出`;
     html += `<div class="stat-card"><div class="label">總支出</div><div class="big">${fmt(total)}</div><div class="meta">${proj().members.length} 位成員 · ${proj().expenses.length} 筆帳目</div></div>`;
     if (!proj().expenses.length) return html + `<div class="empty"><div class="icon">🧾</div><p>還沒有任何支出<br>點右下角 ＋ 新增第一筆</p></div>`;
     html += `<div class="card">`;
-    [...proj().expenses].reverse().forEach(e => {
+    [...proj().expenses].reverse().forEach(e => { html += duoRow(e); });
+    return html + `</div>`;
+  }
+  return renderLedgerPage(type);
+}
+// 多人/雙人共用的支出列
+function duoRow(e) {
       let avatarId, payText, splitText;
       if (e.mode === 'random') {
         avatarId = e.payer;
@@ -111,7 +156,7 @@ function renderExpensesPage(type) {
         payText = (memberById(e.payer)?.name || '?') + ' 先付';
         splitText = `${e.splitters.length} 人分攤`;
       }
-      html += `<div class="row">
+      return `<div class="row">
     ${memberAvatar(memberById(avatarId))}
     <div class="grow">
       <div class="title">${e.desc || e.cat || '未命名支出'}</div>
@@ -122,11 +167,11 @@ function renderExpensesPage(type) {
     <button class="del-btn" style="color:#007aff" onclick="app.openEditSheet(${e.id})">✎</button>
   <button class="del-btn" onclick="app.delExpense(${e.id})">✕</button>
   </div>`;
-    });
-    return html + `</div>`;
-  }
+}
 
-  // fund / personal 明細
+// fund / personal 明細
+function renderLedgerPage(type) {
+  let html = '';
   const s = ledgerStats();
   const isFund = type === 'fund';
   document.getElementById('navSub').textContent = `${proj().expenses.length} 筆紀錄`;
@@ -414,8 +459,19 @@ function openEditSheet(id) {
   const e = proj().expenses.find(x => x.id === id);
   if (!e) return;
   const type = proj().type;
-  openSheet(); // 先建好「新增」表單再回填
+  const duoSimple = type === 'split' && isDuoMode() && !e.mode; // 雙人的均分紀錄
+  openSheet(type === 'split' && isDuoMode() && !!e.mode); // 特殊紀錄強制完整表單
   editingId = id;
+  if (duoSimple) {
+    // 雙人簡化表單：只回填分類/說明/日期/付款人/金額
+    document.getElementById('sheetTitle').textContent = '✎ 編輯支出';
+    const d1 = document.getElementById('inDesc'); if (d1) d1.value = e.desc || '';
+    const d2 = document.getElementById('inDate'); if (d2) d2.value = dateToISO(e.date);
+    const sel = document.getElementById('inPayer'); if (sel) sel.value = String(e.payer);
+    setAmtDisplay(e.amount);
+    markCatChip(e.cat);
+    return;
+  }
   const isSplit = type === 'split';
   document.getElementById('sheetTitle').textContent = isSplit ? '✎ 編輯支出' : '✎ 編輯紀錄';
   const inDesc = document.getElementById('inDesc'); if (inDesc) inDesc.value = e.desc || '';
@@ -530,7 +586,7 @@ function markSettled() {
 }
 
 /* ---------- 新增 sheet ---------- */
-function openSheet() {
+function openSheet(forceFull = false) {
   editingId = null; // 預設為「新增」，openEditSheet 會在之後設回編輯目標
   const type = proj().type;
   const sheet = document.getElementById('sheet'), body = document.getElementById('sheetBody');
@@ -539,6 +595,20 @@ function openSheet() {
     body.innerHTML = `
   <div class="field"><label>名字</label><input id="inName" placeholder="例如：小美" maxlength="10"></div>
   <button class="btn" onclick="app.addMember()">加入</button>`;
+  } else if (type === 'split' && isDuoMode() && forceFull !== true) {
+    // 👥 雙人模式：只需選分類、誰先付、金額（自動兩人均分）
+    document.getElementById('sheetTitle').textContent = '新增支出';
+    const body2 = document.getElementById('sheetBody');
+    body2.innerHTML = `
+  <div class="field"><label>分類</label><div class="chips" id="catChips">${catChipsHTML('out')}</div></div>
+  <div class="field"><label>詳細說明（選填）</label><input id="inDesc" placeholder="例如：鐵板燒"></div>
+  <div class="field"><label>日期</label><input id="inDate" type="date" value="${todayISO()}"></div>
+  <div class="field"><label>誰先付的？（兩人均分）</label><select id="inPayer">${proj().members.map(m => `<option value="${m.id}">${m.name}</option>`).join('')}</select></div>
+  <div class="field"><label>金額 (NT$)</label>${keypadHTML()}</div>
+  <button class="btn" onclick="app.addExpense()">記一筆</button>`;
+    document.getElementById('mask').classList.add('open');
+    document.getElementById('sheet').classList.add('open');
+    return;
   } else if (type === 'split') {
     if (proj().members.length < 2) { toast('請先新增至少 2 位成員'); switchTab('members'); return; }
     document.getElementById('sheetTitle').textContent = '新增支出';
@@ -843,7 +913,8 @@ function addExpense() {
   } else {
     const amt = Math.round(evalAmt(amtStr));
     const payer = +document.getElementById('inPayer').value;
-    const splitters = [...document.querySelectorAll('#chips .chip.on')].map(c => +c.dataset.id);
+    let splitters = [...document.querySelectorAll('#chips .chip.on')].map(c => +c.dataset.id);
+    if (!splitters.length && isDuoMode()) splitters = proj().members.map(m => m.id); // 👥 雙人模式自動均分
     if (!amt || amt <= 0) { toast('請輸入有效金額'); return; }
     if (!splitters.length) { toast('至少選一位分攤者'); return; }
     commitRecord({ cat, desc, amount: amt, payer, splitters, date: dateFromInput() });
@@ -1293,6 +1364,7 @@ function openHelpSheet() {
 
 export {
   toast, render, openAdminUsersSheet, adminDeleteUser, copySettlement, settleTransfer,
+  isDuoMode,
   openProfileSheet, pickAvatar, saveProfile, adminToggleAdmin,
   openMemberEditSheet, pickMemberAvatar, clearMemberAvatar, saveMemberEdit,
   switchTab, selectProjType, selectMode, selectReveal, selectKind, revealRandom, openEditSheet, focusCell, delMember, delExpense, closeSheet, switchProject, selectCat, renameProject, openSheet, openProjectSheet, openMemberSheet, openHelpSheet, openCatSheet, openAuthSheet, openAdminSheet, markSettled, manualRefresh, kp, joinProject, joinByCode, fillEqualSpend, doSignup, doLogout, doLogin, delProject, delCat, cloudAction, changeNick, addProject, addMember, addLedgerRecord, addExpense, addChat, addCat,
