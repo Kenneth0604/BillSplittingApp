@@ -1,17 +1,17 @@
 // UI 層：渲染、表單、事件處理（依賴 store / calc / cloud）
 import {
   data, proj, save, getCats, projKey, CATS, TYPE_INFO, CAT_COLORS,
-} from './store.js?v=11';
+} from './store.js?v=12';
 import {
   fmt, memberById, colorOf, initials, today, todayISO, esc, dateToISO,
   balances, settlements, ledgerStats,
   expenseBreakdown, toItems, memberPaidBreakdown, memberShareBreakdown, depositBreakdown,
   OP_LABEL, dispExpr, evalAmt, editAmt, losersOf,
-} from './calc.js?v=11';
+} from './calc.js?v=12';
 import {
   sb, cloudOn, authUser, isAdmin, setAuthUser, pullAll, syncMyProjects,
   genCode, projPayload, ADMIN_EMAILS, refreshAdminFlag,
-} from './cloud.js?v=11';
+} from './cloud.js?v=12';
 
 let currentPage = 'expenses';
 
@@ -150,7 +150,12 @@ function duoRow(e) {
         const pids = Object.keys(e.paid || {}).map(Number);
         avatarId = pids[0] || 0;
         payText = pids.map(id => memberById(id)?.name || '?').join('、') + ' 先付';
-        splitText = '特定分帳';
+        if (e.duo) {
+          const otherId = Object.keys(e.spent || {}).map(Number)[0];
+          splitText = `${memberById(otherId)?.name || '對方'} 欠全額`;
+        } else {
+          splitText = e.settle ? '💸 清償' : '特定分帳';
+        }
       } else {
         avatarId = e.payer;
         payText = (memberById(e.payer)?.name || '?') + ' 先付';
@@ -459,8 +464,8 @@ function openEditSheet(id) {
   const e = proj().expenses.find(x => x.id === id);
   if (!e) return;
   const type = proj().type;
-  const duoSimple = type === 'split' && isDuoMode() && !e.mode; // 雙人的均分紀錄
-  openSheet(type === 'split' && isDuoMode() && !!e.mode); // 特殊紀錄強制完整表單
+  const duoSimple = type === 'split' && isDuoMode() && !!e.duo; // 雙人直記欠帳紀錄
+  openSheet(type === 'split' && isDuoMode() && !e.duo); // 其他紀錄（均分/特定/隨機）用完整表單
   editingId = id;
   if (duoSimple) {
     // 雙人簡化表單：只回填分類/說明/日期/付款人/金額
@@ -603,8 +608,8 @@ function openSheet(forceFull = false) {
   <div class="field"><label>分類</label><div class="chips" id="catChips">${catChipsHTML('out')}</div></div>
   <div class="field"><label>詳細說明（選填）</label><input id="inDesc" placeholder="例如：鐵板燒"></div>
   <div class="field"><label>日期</label><input id="inDate" type="date" value="${todayISO()}"></div>
-  <div class="field"><label>誰先付的？（兩人均分）</label><select id="inPayer">${proj().members.map(m => `<option value="${m.id}">${m.name}</option>`).join('')}</select></div>
-  <div class="field"><label>金額 (NT$)</label>${keypadHTML()}</div>
+  <div class="field"><label>誰先付的？</label><select id="inPayer">${proj().members.map(m => `<option value="${m.id}">${m.name}</option>`).join('')}</select></div>
+  <div class="field"><label>金額 (NT$)＝對方欠的錢</label>${keypadHTML()}</div>
   <button class="btn" onclick="app.addExpense()">記一筆</button>`;
     document.getElementById('mask').classList.add('open');
     document.getElementById('sheet').classList.add('open');
@@ -867,6 +872,23 @@ function addExpense() {
   const editingRec = editingId != null ? proj().expenses.find(x => x.id === editingId) : null;
   const mode = editingRec ? (editingRec.mode || 'equal')
     : (document.querySelector('#modeChips .chip.on')?.dataset.m || 'equal');
+
+  // 👥 雙人模式直記欠帳：金額＝對方欠付款人的錢（不均分）
+  const duoNew = isDuoMode() && !editingRec && !document.querySelector('#modeChips .chip.on');
+  const duoEdit = !!(editingRec && editingRec.duo);
+  if (duoNew || duoEdit) {
+    const amt = Math.round(evalAmt(amtStr));
+    const payer = +document.getElementById('inPayer').value;
+    const other = proj().members.find(m => m.id !== payer);
+    if (!amt || amt <= 0) { toast('請輸入有效金額'); return; }
+    if (!other) { toast('找不到對方成員'); return; }
+    commitRecord({
+      cat, desc, amount: amt, mode: 'exact', duo: true,
+      paid: { [payer]: amt }, spent: { [other.id]: amt },
+      payer, splitters: [], date: dateFromInput(),
+    });
+    return;
+  }
 
   if (mode === 'exact') {
     // 特定付款：逐人先付／支出
