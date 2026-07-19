@@ -1,17 +1,17 @@
 // UI 層：渲染、表單、事件處理（依賴 store / calc / cloud）
 import {
   data, proj, save, getCats, projKey, CATS, TYPE_INFO, CAT_COLORS,
-} from './store.js?v=14';
+} from './store.js?v=15';
 import {
   fmt, memberById, colorOf, initials, today, todayISO, esc, dateToISO,
   balances, settlements, ledgerStats,
   expenseBreakdown, toItems, memberPaidBreakdown, memberShareBreakdown, depositBreakdown,
   OP_LABEL, dispExpr, evalAmt, editAmt, losersOf,
-} from './calc.js?v=14';
+} from './calc.js?v=15';
 import {
   sb, cloudOn, authUser, isAdmin, setAuthUser, pullAll, syncMyProjects,
   genCode, projPayload, ADMIN_EMAILS, refreshAdminFlag,
-} from './cloud.js?v=14';
+} from './cloud.js?v=15';
 
 let currentPage = 'expenses';
 
@@ -1156,6 +1156,31 @@ async function adminToggleAdmin(id, grant, name) {
   refreshAdminFlag();
   openAdminUsersSheet();
 }
+// 管理員：直接改雲端專案名稱（不需加入）
+async function adminRenameProject(code) {
+  const { data: row, error } = await sb.from('shared_projects').select('*').eq('code', code).single();
+  if (error || !row) { toast('讀取失敗'); return; }
+  const name = prompt('修改專案名稱', row.name);
+  if (!name || !name.trim() || name.trim() === row.name) return;
+  const d = row.data || {};
+  d.name = name.trim();
+  const { error: e2 } = await sb.from('shared_projects').update({ name: name.trim(), data: d }).eq('code', code);
+  if (e2) { toast('更新失敗：' + e2.message); return; }
+  const local = data.projects.find(p => p.cloud && p.cloud.code === code);
+  if (local) { local.name = name.trim(); save(); render(); }
+  toast('已改名 ✓');
+  openAdminSheet();
+}
+// 管理員：從雲端刪除專案（所有成員失去同步；本機副本轉為純本機保留）
+async function adminDeleteCloudProject(code, name) {
+  if (!confirm(`確定從雲端刪除「${name}」？\n所有成員都會失去同步，此動作無法復原`)) return;
+  const { error } = await sb.from('shared_projects').delete().eq('code', code);
+  if (error) { toast('刪除失敗：' + error.message); return; }
+  const local = data.projects.find(p => p.cloud && p.cloud.code === code);
+  if (local) { delete local.cloud; save(); render(); }
+  toast(`已從雲端刪除「${name}」`);
+  openAdminSheet();
+}
 async function adminDeleteUser(id, name) {
   if (!confirm(`確定刪除帳號「${name}」？該帳號將無法再登入，其成員資格一併移除（帳目與專案內容保留）`)) return;
   const { error } = await sb.rpc('admin_delete_user', { p_user: id });
@@ -1174,7 +1199,7 @@ async function openAdminSheet() {
     .select('code,name,updated_at,data').order('updated_at', { ascending: false });
   if (error) { body.innerHTML = `<div class="empty">載入失敗：${esc(error.message)}</div>`; return; }
   if (!rows || !rows.length) { body.innerHTML = `<div class="empty"><div class="icon">☁</div><p>雲端上還沒有任何專案</p></div>`; return; }
-  let html = `<div class="section-title">共 ${rows.length} 個專案（點一下加入／切換）</div><div class="card">`;
+  let html = `<div class="section-title">共 ${rows.length} 個專案（點一下加入；✎ 改名 ✕ 從雲端刪除）</div><div class="card">`;
   rows.forEach(r => {
     const d = r.data || {};
     const ti = TYPE_INFO[d.type] || TYPE_INFO.split;
@@ -1185,6 +1210,8 @@ async function openAdminSheet() {
         <div class="title">${esc(r.name)}<span class="type-tag ${ti.tag}">${ti.name}</span></div>
         <div class="detail">☁ ${esc(r.code)} · ${(d.members || []).length} 位成員 · ${(d.expenses || []).length} 筆 · 更新 ${esc(t)}</div>
       </div>
+      <button class="del-btn" style="color:#007aff" onclick="event.stopPropagation();app.adminRenameProject('${esc(r.code)}')">✎</button>
+      <button class="del-btn" onclick="event.stopPropagation();app.adminDeleteCloudProject('${esc(r.code)}','${esc(r.name)}')">✕</button>
     </div>`;
   });
   body.innerHTML = html + `</div>`;
@@ -1426,6 +1453,7 @@ function openHelpSheet() {
 
 export {
   toast, render, openAdminUsersSheet, adminDeleteUser, copySettlement, settleTransfer,
+  adminRenameProject, adminDeleteCloudProject,
   isDuoMode, openCatEditSheet, saveCatEdit, updateExactSum,
   openProfileSheet, pickAvatar, saveProfile, adminToggleAdmin,
   openMemberEditSheet, pickMemberAvatar, clearMemberAvatar, saveMemberEdit,

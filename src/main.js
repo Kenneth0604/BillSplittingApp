@@ -1,7 +1,7 @@
 // 開機組裝：接線、全域橋、初始化
-import * as store from './store.js?v=14';
-import * as cloud from './cloud.js?v=14';
-import * as ui from './ui.js?v=14';
+import * as store from './store.js?v=15';
+import * as cloud from './cloud.js?v=15';
+import * as ui from './ui.js?v=15';
 
 // 1) 載入本機資料
 store.load();
@@ -15,6 +15,8 @@ cloud.hooks.render = ui.render;
 window.app = {
   openAdminUsersSheet: ui.openAdminUsersSheet,
   adminDeleteUser: ui.adminDeleteUser,
+  adminRenameProject: ui.adminRenameProject,
+  adminDeleteCloudProject: ui.adminDeleteCloudProject,
   copySettlement: ui.copySettlement,
   settleTransfer: ui.settleTransfer,
   openCatEditSheet: ui.openCatEditSheet,
