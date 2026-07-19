@@ -1,7 +1,7 @@
 // 開機組裝：接線、全域橋、初始化
-import * as store from './store.js?v=12';
-import * as cloud from './cloud.js?v=12';
-import * as ui from './ui.js?v=12';
+import * as store from './store.js?v=13';
+import * as cloud from './cloud.js?v=13';
+import * as ui from './ui.js?v=13';
 
 // 1) 載入本機資料
 store.load();
@@ -17,6 +17,9 @@ window.app = {
   adminDeleteUser: ui.adminDeleteUser,
   copySettlement: ui.copySettlement,
   settleTransfer: ui.settleTransfer,
+  openCatEditSheet: ui.openCatEditSheet,
+  saveCatEdit: ui.saveCatEdit,
+  updateExactSum: ui.updateExactSum,
   openProfileSheet: ui.openProfileSheet,
   pickAvatar: ui.pickAvatar,
   saveProfile: ui.saveProfile,

@@ -507,6 +507,20 @@ body {
 }
 
 /* 數字鍵盤 */
+.amt-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: #fff;
+  border-radius: 12px;
+  padding: 13px 16px;
+  font-size: 24px;
+  font-weight: 800;
+  text-align: right;
+  font-family: inherit;
+  color: #000;
+}
+
 .amt-display {
   background: #fff;
   border-radius: 12px;
@@ -566,6 +580,9 @@ body {
 .amt-cell {
   width: 74px;
   max-width: 22vw;
+  border: none;
+  outline: none;
+  font-family: inherit;
   text-align: right;
   background: #f2f2f7;
   border-radius: 8px;

@@ -42,7 +42,7 @@ t('結算含未開獎排除', Math.abs(Object.values(calc.balances()).reduce((a,
 
 // ---- 特定付款＋均分支出 ----
 ui.openSheet();
-ui.focusCell('pay_1'); ui.kp('9'); ui.kp('9');
+gid('cell_pay_1').value = '99';
 qsaResult['#eqChips .chip.on'] = [newEl({dataset:{id:'1'}}), newEl({dataset:{id:'2'}})];
 ui.fillEqualSpend();
 const et = ui ? null : null;
@@ -61,8 +61,7 @@ qsaResult['#catChips .chip.on'] = chipOn({c:'🎮 娛樂'});
 qsaResult['#candChips .chip.on'] = [newEl({dataset:{id:'1'}}), newEl({dataset:{id:'2'}}), newEl({dataset:{id:'3'}})];
 qsaResult['#revealChips .chip.on'] = chipOn({r:'later'});
 gid('inDrawN').value='2'; gid('inDesc').value='多人抽'; gid('inDate').value='';
-for(let i=0;i<8;i++) ui.kp('⌫');
-ui.kp('9'); ui.kp('0'); ui.kp('0');
+gid('amtInput').value = '900';
 ui.addExpense();
 const rnd = store.proj().expenses.at(-1);
 t('抽2人未開獎', rnd.mode==='random' && rnd.losers.length===2 && rnd.revealed===false);
@@ -115,12 +114,10 @@ ui.switchTab('expenses'); ui.openSheet();
 qsaResult['#kindChips .chip.on'] = chipOn({k:'in'});
 qsaResult['#catChips .chip.on'] = chipOn({c:'🏦 存入'});
 gid('inPayer').value=String(store.proj().members[0].id); gid('inDate').value='';
-for(let i=0;i<8;i++) ui.kp('⌫');
-ui.kp('5'); ui.kp('0'); ui.kp('0');
+gid('amtInput').value = '500';
 ui.addLedgerRecord();
 qsaResult['#kindChips .chip.on'] = chipOn({k:'out'});
-for(let i=0;i<8;i++) ui.kp('⌫');
-ui.kp('2'); ui.kp('0'); ui.kp('0');
+gid('amtInput').value = '200';
 ui.addLedgerRecord();
 t('基金存支＋餘額', calc.ledgerStats().bal===300);
 ui.switchTab('settle');
@@ -134,8 +131,7 @@ t('建立個人專案', store.proj().type==='personal');
 ui.openSheet();
 qsaResult['#kindChips .chip.on'] = chipOn({k:'in'});
 qsaResult['#catChips .chip.on'] = chipOn({c:'💰 薪水'});
-for(let i=0;i<8;i++) ui.kp('⌫');
-ui.kp('6'); ui.kp('7'); ui.kp('*'); ui.kp('2');   // 67*2=134
+gid('amtInput').value = '67*2';   // 桌面可打算式
 ui.addLedgerRecord();
 t('個人收入（運算式）', calc.ledgerStats().tin===134);
 ui.switchTab('settle'); ui.switchTab('expenses');

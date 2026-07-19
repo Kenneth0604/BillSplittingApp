@@ -1,17 +1,17 @@
 // UI 層：渲染、表單、事件處理（依賴 store / calc / cloud）
 import {
   data, proj, save, getCats, projKey, CATS, TYPE_INFO, CAT_COLORS,
-} from './store.js?v=12';
+} from './store.js?v=13';
 import {
   fmt, memberById, colorOf, initials, today, todayISO, esc, dateToISO,
   balances, settlements, ledgerStats,
   expenseBreakdown, toItems, memberPaidBreakdown, memberShareBreakdown, depositBreakdown,
   OP_LABEL, dispExpr, evalAmt, editAmt, losersOf,
-} from './calc.js?v=12';
+} from './calc.js?v=13';
 import {
   sb, cloudOn, authUser, isAdmin, setAuthUser, pullAll, syncMyProjects,
   genCode, projPayload, ADMIN_EMAILS, refreshAdminFlag,
-} from './cloud.js?v=12';
+} from './cloud.js?v=13';
 
 let currentPage = 'expenses';
 
@@ -254,7 +254,7 @@ function renderMembersPage(type) {
     html += `<div class="section-title">${g.label}（點 ✕ 刪除）</div>
   <div class="card"><div style="padding:14px"><div class="chips">`;
     getCats(g.kind).forEach((c, i) => {
-      html += `<div class="chip">${c}<span class="x" onclick="app.delCat('${g.kind}',${i})">✕</span></div>`;
+      html += `<div class="chip" onclick="app.openCatEditSheet('${g.kind}',${i})" style="cursor:pointer">${c}<span class="x" onclick="event.stopPropagation();app.delCat('${g.kind}',${i})">✕</span></div>`;
     });
     html += `</div></div></div>
   <button class="btn gray" onclick="app.openCatSheet('${g.kind}','${g.label}')">＋ 新增${g.label}</button>`;
@@ -457,8 +457,8 @@ function markCatChip(cat) {
 }
 function setAmtDisplay(v) {
   amtStr = String(v);
-  const d = document.getElementById('amtDisplay');
-  if (d) { d.textContent = amtText(amtStr); d.classList.remove('zero'); }
+  const el = document.getElementById('amtInput');
+  if (el) el.value = String(v);
 }
 function openEditSheet(id) {
   const e = proj().expenses.find(x => x.id === id);
@@ -498,12 +498,12 @@ function openEditSheet(id) {
         if (pv) {
           cellStr['pay_' + m.id] = String(pv);
           const el = document.getElementById('cell_pay_' + m.id);
-          if (el) { el.textContent = String(pv); el.classList.remove('zero'); }
+          if (el) el.value = String(pv);
         }
         if (sv) {
           cellStr['spend_' + m.id] = String(sv);
           const el = document.getElementById('cell_spend_' + m.id);
-          if (el) { el.textContent = String(sv); el.classList.remove('zero'); }
+          if (el) el.value = String(sv);
         }
       });
       updateExactSum();
@@ -668,16 +668,20 @@ export function randInt(n) {
   do { g.getRandomValues(buf); x = buf[0]; } while (x >= limit);
   return x % n;
 }
+// 金額輸入：手機跳原生數字鍵盤（inputmode=decimal）；桌面可直接打算式如 670/3
 function keypadHTML(withDisplay = true) {
   amtStr = ''; activeKey = null;
-  const keys = ['1', '2', '3', '/', '4', '5', '6', '*', '7', '8', '9', '-', '.', '0', '⌫', '+'];
-  return (withDisplay ? `<div class="amt-display zero" id="amtDisplay">0</div>` : '') +
-    `<div class="keypad">` +
-    keys.map(k => {
-      const cls = OP_LABEL[k] ? 'op' : (k === '.' || k === '⌫' ? 'fn' : '');
-      return `<button class="key ${cls}" onclick="app.kp('${k}')">${OP_LABEL[k] || k}</button>`;
-    }).join('') +
-    `</div>`;
+  if (!withDisplay) return '';
+  return `<input class="amt-input" id="amtInput" type="text" inputmode="decimal" placeholder="0" autocomplete="off" onkeydown="if(event.key==='Enter')event.target.blur()">`;
+}
+// 讀取金額欄（相容測試直接操作 amtStr 的路徑）
+function amtVal() {
+  const el = document.getElementById('amtInput');
+  return (el && el.value !== undefined && el.value !== '') ? el.value : amtStr;
+}
+function cellVal(key) {
+  const el = document.getElementById('cell_' + key);
+  return (el && el.value !== undefined && el.value !== '') ? el.value : (cellStr[key] || '');
 }
 function amtText(s) {
   if (!s) return '0';
@@ -708,11 +712,11 @@ function exactFormHTML() {
   const rows = proj().members.map(m => `
 <div class="row exact-row">
   <div class="grow" style="font-weight:600">${m.name}</div>
-  <div class="amt-cell zero" id="cell_pay_${m.id}" onclick="app.focusCell('pay_${m.id}')">0</div>
-  <div class="amt-cell zero" id="cell_spend_${m.id}" onclick="app.focusCell('spend_${m.id}')">0</div>
+  <input class="amt-cell" type="text" inputmode="decimal" placeholder="0" id="cell_pay_${m.id}" oninput="app.updateExactSum()">
+  <input class="amt-cell" type="text" inputmode="decimal" placeholder="0" id="cell_spend_${m.id}" oninput="app.updateExactSum()">
 </div>`).join('');
   return `
-<div class="field"><label>點格子後用下方鍵盤輸入金額</label>
+<div class="field"><label>輸入各自的先付與支出</label>
   <div class="card">
     <div class="row exact-row" style="color:#8e8e93;font-size:13px;font-weight:600">
       <div class="grow">成員</div><div class="exact-h">先付</div><div class="exact-h">支出</div>
@@ -726,7 +730,7 @@ function exactFormHTML() {
   <div style="height:8px"></div>
   <button class="btn gray" onclick="app.fillEqualSpend()">⚖️ 把先付合計均分到支出</button>
 </div>
-<div class="field">${keypadHTML(false)}</div>`;
+`;
 }
 // 特定分帳：把先付合計均分到選取成員的支出格（整數，餘數由前面的人多攤 1 元）
 function fillEqualSpend() {
@@ -740,11 +744,7 @@ function fillEqualSpend() {
   sel.forEach((id, i) => { cellStr['spend_' + id] = String(base + (i < rem ? 1 : 0)); });
   proj().members.forEach(m => {
     const el = document.getElementById('cell_spend_' + m.id);
-    if (el) {
-      const v = cellStr['spend_' + m.id] || '';
-      el.textContent = v || '0';
-      el.classList.toggle('zero', !v);
-    }
+    if (el) el.value = cellStr['spend_' + m.id] || '';
   });
   updateExactSum();
   toast('已均分支出 ✓');
@@ -803,8 +803,8 @@ function focusCell(key) {
 function exactTotals() {
   let tp = 0, ts = 0;
   proj().members.forEach(m => {
-    tp += evalAmt(cellStr['pay_' + m.id]) || 0;
-    ts += evalAmt(cellStr['spend_' + m.id]) || 0;
+    tp += evalAmt(cellVal('pay_' + m.id)) || 0;
+    ts += evalAmt(cellVal('spend_' + m.id)) || 0;
   });
   return { tp, ts };
 }
@@ -834,6 +834,32 @@ function addCat(kind) {
   if (getCats(kind).includes(name)) { toast('分類已存在'); return; }
   getCats(kind).push(name);
   save(); closeSheet(); toast(`已加入「${name}」`); render();
+}
+// 編輯既有分類：改名並同步更新用到的帳目
+function openCatEditSheet(kind, i) {
+  const cats = getCats(kind);
+  const cur = cats[i];
+  if (cur === undefined) return;
+  document.getElementById('sheetTitle').textContent = '✎ 編輯分類';
+  document.getElementById('sheetBody').innerHTML = `
+<div class="field"><label>分類名稱（改名會同步更新既有帳目）</label>
+  <input id="inCatEdit" maxlength="12" value="${esc(cur)}"></div>
+<button class="btn" onclick="app.saveCatEdit('${kind}',${i})">儲存</button>`;
+  document.getElementById('mask').classList.add('open');
+  document.getElementById('sheet').classList.add('open');
+}
+function saveCatEdit(kind, i) {
+  const cats = getCats(kind);
+  const cur = cats[i];
+  const name = document.getElementById('inCatEdit').value.trim();
+  if (!name) { toast('請輸入分類名稱'); return; }
+  if (name === cur) { closeSheet(); return; }
+  if (cats.includes(name)) { toast('分類已存在'); return; }
+  cats[i] = name;
+  let touched = 0;
+  proj().expenses.forEach(e => { if (e.cat === cur) { e.cat = name; touched++; } });
+  save(); closeSheet(); render();
+  toast(`已改名「${name}」${touched ? `，更新了 ${touched} 筆帳目` : ''}`);
 }
 function delCat(kind, i) {
   const cats = getCats(kind);
@@ -877,7 +903,7 @@ function addExpense() {
   const duoNew = isDuoMode() && !editingRec && !document.querySelector('#modeChips .chip.on');
   const duoEdit = !!(editingRec && editingRec.duo);
   if (duoNew || duoEdit) {
-    const amt = Math.round(evalAmt(amtStr));
+    const amt = Math.round(evalAmt(amtVal()));
     const payer = +document.getElementById('inPayer').value;
     const other = proj().members.find(m => m.id !== payer);
     if (!amt || amt <= 0) { toast('請輸入有效金額'); return; }
@@ -895,8 +921,8 @@ function addExpense() {
     const paid = {}, spent = {};
     let tp = 0, ts = 0; // 以「取整後」的數字驗證與入帳
     proj().members.forEach(m => {
-      const p = Math.round(evalAmt(cellStr['pay_' + m.id]) || 0);
-      const s = Math.round(evalAmt(cellStr['spend_' + m.id]) || 0);
+      const p = Math.round(evalAmt(cellVal('pay_' + m.id)) || 0);
+      const s = Math.round(evalAmt(cellVal('spend_' + m.id)) || 0);
       if (p > 0) { paid[m.id] = p; tp += p; }
       if (s > 0) { spent[m.id] = s; ts += s; }
     });
@@ -906,7 +932,7 @@ function addExpense() {
     return;
   } else if (mode === 'random') {
     // 🎲 隨機抽 N 個人一起買單（均攤）
-    const amt = Math.round(evalAmt(amtStr));
+    const amt = Math.round(evalAmt(amtVal()));
     if (editingRec) {
       // 編輯隨機付款：不重抽，只更新金額/分類/說明/日期
       if (!amt || amt <= 0) { toast('請輸入有效金額'); return; }
@@ -933,7 +959,7 @@ function addExpense() {
     toast(revealNow ? `🎲 抽中 ${names} 買單！` : '🎲 已抽籤，到結算頁開獎');
     return;
   } else {
-    const amt = Math.round(evalAmt(amtStr));
+    const amt = Math.round(evalAmt(amtVal()));
     const payer = +document.getElementById('inPayer').value;
     let splitters = [...document.querySelectorAll('#chips .chip.on')].map(c => +c.dataset.id);
     if (!splitters.length && isDuoMode()) splitters = proj().members.map(m => m.id); // 👥 雙人模式自動均分
@@ -947,7 +973,7 @@ function addLedgerRecord() {
   const kind = document.querySelector('#kindChips .chip.on').dataset.k;
   const cat = document.querySelector('#catChips .chip.on')?.dataset.c || '📦 其他';
   const desc = document.getElementById('inDesc').value.trim();
-  const amt = Math.round(evalAmt(amtStr));
+  const amt = Math.round(evalAmt(amtVal()));
   if (!amt || amt <= 0) { toast('請輸入有效金額'); return; }
   const payer = (isFund && kind === 'in') ? +document.getElementById('inPayer').value : 0;
   commitRecord({ cat, desc, amount: amt, kind, payer, splitters: [], date: dateFromInput() });
@@ -1386,7 +1412,7 @@ function openHelpSheet() {
 
 export {
   toast, render, openAdminUsersSheet, adminDeleteUser, copySettlement, settleTransfer,
-  isDuoMode,
+  isDuoMode, openCatEditSheet, saveCatEdit, updateExactSum,
   openProfileSheet, pickAvatar, saveProfile, adminToggleAdmin,
   openMemberEditSheet, pickMemberAvatar, clearMemberAvatar, saveMemberEdit,
   switchTab, selectProjType, selectMode, selectReveal, selectKind, revealRandom, openEditSheet, focusCell, delMember, delExpense, closeSheet, switchProject, selectCat, renameProject, openSheet, openProjectSheet, openMemberSheet, openHelpSheet, openCatSheet, openAuthSheet, openAdminSheet, markSettled, manualRefresh, kp, joinProject, joinByCode, fillEqualSpend, doSignup, doLogout, doLogin, delProject, delCat, cloudAction, changeNick, addProject, addMember, addLedgerRecord, addExpense, addChat, addCat,
