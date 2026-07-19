@@ -89,7 +89,7 @@ index.html（外殼）─ style.css（樣式）
 
 - Supabase Auth（Email＋密碼），註冊時記錄暱稱在 `user_metadata.nickname`。登入狀態由 supabase-js 存在 localStorage，重開瀏覽器仍有效。
 - **使用者名稱**：每個帳號綁定一個名稱（註冊時設定，帳號視窗可隨時修改）。**第一次進入**某個專案時會詢問「要在此專案顯示的名稱」，預設帶帳號名稱，之後記住（存在該裝置 `localStorage` 的 `nick_<專案代碼>`）。留言暱稱優先序：此專案自訂名稱 → 帳號名稱 → 上次用過的名字，同一人在不同專案可用不同名稱。
-- **登入即同步專案清單**：登入後自動從雲端抓回「你是成員的所有專案」——換裝置登入同帳號，專案清單會自動出現，不必重新輸入代碼。（注意：本機刪除專案不會退出成員資格，下次登入同步時該專案會再出現。）
+- **登入即同步專案清單**：登入後自動從雲端抓回「你是成員的所有專案」——換裝置登入同帳號，專案清單會自動出現，不必重新輸入代碼。專案面板按 ✕ 即退出成員資格（同步就不會再抓回來），想回來用代碼重新加入即可。
 - 管理員：email 在程式內 `ADMIN_EMAILS` 名單中者，登入後可在專案面板列出雲端全部專案並一鍵加入。
 
 ## 三、操作手冊
@@ -99,6 +99,7 @@ index.html（外殼）─ style.css（樣式）
 | 想做什麼 | 怎麼做 |
 |---|---|
 | 切換／新建專案 | 點左上角 📁 專案列 → 選專案或填名稱＋選類型建立 |
+| 退出專案 | 專案面板按 ✕：雲端專案＝退出成員（可用代碼再加入）；純本機專案＝永久刪除 |
 | 記一筆帳 | 記記頁右下 ＋ → 選分類 → 填說明（選填）→ 選分帳方式 → 數字鍵盤輸入金額 |
 | 特定付款 | （預設）表格中點各人「先付／支出」格子後用鍵盤輸入，兩邊合計相等才能送出 |
 | 均分 | 切「均分」→ 輸入總額 → 選誰先付、誰分攤 |
@@ -301,6 +302,9 @@ create policy "owner or admin delete" on public.shared_projects
 drop policy if exists "read own memberships" on public.project_members;
 create policy "read own memberships" on public.project_members
   for select using (user_id = auth.uid() or public.is_admin());
+drop policy if exists "leave own membership" on public.project_members;
+create policy "leave own membership" on public.project_members
+  for delete using (user_id = auth.uid());
 
 -- 9) 管理員：列出所有帳號（含 admin 身分；非管理員呼叫會拿到空清單）
 drop function if exists public.admin_list_users();

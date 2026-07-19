@@ -1,5 +1,5 @@
 // 純計算與工具函式（只依賴 store）
-import { proj, COLORS } from './store.js?v=13';
+import { proj, COLORS } from './store.js?v=14';
 
 const fmt = n => 'NT$ ' + Math.round(n).toLocaleString('zh-Hant'); // 金額一律取整數顯示
 const memberById = id => proj().members.find(m => m.id === id);

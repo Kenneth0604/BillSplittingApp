@@ -1,17 +1,17 @@
 // UI 層：渲染、表單、事件處理（依賴 store / calc / cloud）
 import {
   data, proj, save, getCats, projKey, CATS, TYPE_INFO, CAT_COLORS,
-} from './store.js?v=13';
+} from './store.js?v=14';
 import {
   fmt, memberById, colorOf, initials, today, todayISO, esc, dateToISO,
   balances, settlements, ledgerStats,
   expenseBreakdown, toItems, memberPaidBreakdown, memberShareBreakdown, depositBreakdown,
   OP_LABEL, dispExpr, evalAmt, editAmt, losersOf,
-} from './calc.js?v=13';
+} from './calc.js?v=14';
 import {
   sb, cloudOn, authUser, isAdmin, setAuthUser, pullAll, syncMyProjects,
   genCode, projPayload, ADMIN_EMAILS, refreshAdminFlag,
-} from './cloud.js?v=13';
+} from './cloud.js?v=14';
 
 let currentPage = 'expenses';
 
@@ -1049,13 +1049,27 @@ function renameProject(id) {
   if (!name || !name.trim()) return;
   p.name = name.trim(); save(); openProjectSheet(); render();
 }
-function delProject(id) {
+// ✕＝從我的清單移除（雲端專案＝退出成員，專案本身與其他成員不受影響）
+async function delProject(id) {
   if (data.projects.length <= 1) { toast('至少要保留一個專案'); return; }
   const p = data.projects.find(x => x.id === id);
-  if (!confirm(`確定刪除「${p.name}」？此專案的帳目將一併刪除`)) return;
+  if (!p) return;
+  if (p.cloud) {
+    if (!confirm(`確定退出「${p.name}」？\n專案仍在雲端、其他成員不受影響；之後可用代碼 ${p.cloud.code} 重新加入`)) return;
+    // 雲端退出成員資格（不退出的話，下次登入同步又會加回來）
+    if (cloudOn() && authUser) {
+      try {
+        const { data: row } = await sb.from('shared_projects').select('id').eq('code', p.cloud.code).single();
+        if (row) await sb.from('project_members').delete().eq('project_id', row.id).eq('user_id', authUser.id);
+      } catch (e) { /* 離線也照樣本機移除 */ }
+    }
+  } else {
+    if (!confirm(`「${p.name}」只存在這台裝置，移除即永久刪除且無法復原。確定？`)) return;
+  }
   data.projects = data.projects.filter(x => x.id !== id);
   if (data.currentProjectId === id) data.currentProjectId = data.projects[0].id;
-  save(); openProjectSheet(); render(); toast('已刪除專案');
+  save(); openProjectSheet(); render();
+  toast(p.cloud ? `已退出「${p.name}」` : '已移除專案');
 }
 
 async function uploadProject(id) {

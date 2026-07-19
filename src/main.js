@@ -1,7 +1,7 @@
 // 開機組裝：接線、全域橋、初始化
-import * as store from './store.js?v=13';
-import * as cloud from './cloud.js?v=13';
-import * as ui from './ui.js?v=13';
+import * as store from './store.js?v=14';
+import * as cloud from './cloud.js?v=14';
+import * as ui from './ui.js?v=14';
 
 // 1) 載入本機資料
 store.load();
