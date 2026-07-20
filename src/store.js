@@ -1,5 +1,5 @@
 // 資料層：狀態、儲存、遷移（無相依）
-const COLORS = ['#ff9500', '#34c759', '#5856d6', '#ff2d55', '#af52de', '#00c7be', '#ff3b30', '#007aff'];
+const COLORS = ['#d99a1b', '#0f9d63', '#6d4aff', '#e5477a', '#a855f7', '#0d9488', '#dc2626', '#2563eb'];
 const TYPE_INFO = {
   split: { name: '多人分帳', tag: 'type-split' },
   fund: { name: '共同基金', tag: 'type-fund' },
@@ -10,7 +10,7 @@ const CATS = {
   out: ['🍳 早餐', '🍱 午餐', '🍽️ 晚餐', '🧋 飲料', '🚕 交通', '🎮 娛樂'],
   in: ['💰 薪水', '🎁 獎金', '🏦 存入', '↩️ 退款', '📦 其他'],
 };
-const CAT_COLORS = ['#ff9500', '#34c759', '#5856d6', '#ff2d55', '#af52de', '#00c7be', '#ff3b30', '#007aff', '#ffcc00', '#8e8e93'];
+const CAT_COLORS = ['#d99a1b', '#0f9d63', '#6d4aff', '#e5477a', '#a855f7', '#0d9488', '#dc2626', '#2563eb', '#eab308', '#64748b'];
 
 /* ---------- 資料儲存（localStorage，多專案） ---------- */
 function defaultData() {

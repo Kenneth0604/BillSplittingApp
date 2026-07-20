@@ -1,17 +1,17 @@
 // UI 層：渲染、表單、事件處理（依賴 store / calc / cloud）
 import {
   data, proj, save, getCats, projKey, CATS, TYPE_INFO, CAT_COLORS,
-} from './store.js?v=15';
+} from './store.js?v=16';
 import {
   fmt, memberById, colorOf, initials, today, todayISO, esc, dateToISO,
   balances, settlements, ledgerStats,
   expenseBreakdown, toItems, memberPaidBreakdown, memberShareBreakdown, depositBreakdown,
   OP_LABEL, dispExpr, evalAmt, editAmt, losersOf,
-} from './calc.js?v=15';
+} from './calc.js?v=16';
 import {
   sb, cloudOn, authUser, isAdmin, setAuthUser, pullAll, syncMyProjects,
   genCode, projPayload, ADMIN_EMAILS, refreshAdminFlag,
-} from './cloud.js?v=15';
+} from './cloud.js?v=16';
 
 let currentPage = 'expenses';
 
@@ -168,8 +168,8 @@ function duoRow(e) {
       <div class="detail">${e.desc && e.cat ? e.cat + ' · ' : ''}${payText} · ${splitText} · ${e.date}</div>
     </div>
     <div class="amount">${fmt(e.amount)}</div>
-    ${e.mode === 'random' && !e.revealed ? `<button class="del-btn" style="color:#ff9500" onclick="app.revealRandom(${e.id})">🎲</button>` : ''}
-    <button class="del-btn" style="color:#007aff" onclick="app.openEditSheet(${e.id})">✎</button>
+    ${e.mode === 'random' && !e.revealed ? `<button class="del-btn" style="color:var(--warning)" onclick="app.revealRandom(${e.id})">🎲</button>` : ''}
+    <button class="del-btn" style="color:var(--primary)" onclick="app.openEditSheet(${e.id})">✎</button>
   <button class="del-btn" onclick="app.delExpense(${e.id})">✕</button>
   </div>`;
 }
@@ -189,7 +189,7 @@ function renderLedgerPage(type) {
   [...proj().expenses].reverse().forEach(e => {
     const isIn = e.kind === 'in';
     let detail = e.date;
-    let avatar = `<div class="avatar" style="background:${isIn ? '#34c759' : '#ff3b30'}">${isIn ? '＋' : '－'}</div>`;
+    let avatar = `<div class="avatar" style="background:${isIn ? 'var(--success)' : 'var(--danger)'}">${isIn ? '＋' : '－'}</div>`;
     if (isFund && isIn) {
       const m = memberById(e.payer);
       avatar = `<div class="avatar" style="background:${colorOf(e.payer)}">${initials(m?.name || '?')}</div>`;
@@ -223,7 +223,7 @@ function renderMembersPage(type) {
       ${memberAvatar(m)}
       <div class="grow"><div class="title">${esc(m.name)}</div><div class="detail">已存入</div></div>
       <div class="amount pos">${fmt(s.dep[m.id])}</div>
-      <button class="del-btn" style="color:#007aff" onclick="app.openMemberEditSheet(${m.id})">✎</button>
+      <button class="del-btn" style="color:var(--primary)" onclick="app.openMemberEditSheet(${m.id})">✎</button>
       <button class="del-btn" onclick="app.delMember(${m.id})">✕</button>
     </div>`;
       });
@@ -238,7 +238,7 @@ function renderMembersPage(type) {
       <div class="grow"><div class="title">${esc(m.name)}</div>
         <div class="detail">${b > 0.01 ? '應收回' : b < -0.01 ? '應支付' : '無欠款'}</div></div>
       <div class="amount ${cls}">${txt}</div>
-      <button class="del-btn" style="color:#007aff" onclick="app.openMemberEditSheet(${m.id})">✎</button>
+      <button class="del-btn" style="color:var(--primary)" onclick="app.openMemberEditSheet(${m.id})">✎</button>
       <button class="del-btn" onclick="app.delMember(${m.id})">✕</button>
     </div>`;
       });
@@ -271,11 +271,11 @@ function renderSettlePage(type) {
       html += `<div class="section-title">🎲 未開獎（尚未列入結算）</div><div class="card">`;
       pending.forEach(e => {
         html += `<div class="row">
-      <div class="avatar" style="background:#ff9500">🎲</div>
+      <div class="avatar" style="background:var(--warning)">🎲</div>
       <div class="grow"><div class="title">${e.desc || e.cat || '神秘支出'}</div>
         <div class="detail">${memberById(e.payer)?.name || '?'} 先付 · ${e.date}</div></div>
       <div class="amount">${fmt(e.amount)}</div>
-      <button class="del-btn" style="color:#ff9500;font-size:14px;font-weight:700" onclick="app.revealRandom(${e.id})">開獎</button>
+      <button class="del-btn" style="color:var(--warning);font-size:14px;font-weight:700" onclick="app.revealRandom(${e.id})">開獎</button>
     </div>`;
       });
       html += `</div>`;
@@ -718,7 +718,7 @@ function exactFormHTML() {
   return `
 <div class="field"><label>輸入各自的先付與支出</label>
   <div class="card">
-    <div class="row exact-row" style="color:#8e8e93;font-size:13px;font-weight:600">
+    <div class="row exact-row" style="color:var(--text-secondary);font-size:13px;font-weight:600">
       <div class="grow">成員</div><div class="exact-h">先付</div><div class="exact-h">支出</div>
     </div>
     ${rows}
@@ -996,8 +996,8 @@ function openProjectSheet() {
     <div class="detail">${p.type === 'personal' ? '' : p.members.length + ' 位成員 · '}${p.expenses.length} 筆紀錄${p.cloud ? ' · ☁ ' + p.cloud.code : ''}</div>
   </div>
   ${cur ? '<span class="badge">目前</span>' : ''}
-  <button class="del-btn" onclick="event.stopPropagation();app.cloudAction(${p.id})" style="color:${p.cloud ? '#34c759' : '#8e8e93'}">☁</button>
-  <button class="del-btn" onclick="event.stopPropagation();app.renameProject(${p.id})" style="color:#007aff">✎</button>
+  <button class="del-btn" onclick="event.stopPropagation();app.cloudAction(${p.id})" style="color:${p.cloud ? 'var(--success)' : 'var(--text-secondary)'}">☁</button>
+  <button class="del-btn" onclick="event.stopPropagation();app.renameProject(${p.id})" style="color:var(--primary)">✎</button>
   <button class="del-btn" onclick="event.stopPropagation();app.delProject(${p.id})">✕</button>
 </div>`;
   });
@@ -1134,12 +1134,12 @@ async function openAdminUsersSheet() {
     const founder = (u.email || '').toLowerCase() === ADMIN_EMAILS[0];
     const day = String(u.created_at || '').slice(0, 10);
     html += `<div class="row">
-      <div class="avatar" style="background:${me ? '#007aff' : '#8e8e93'}">${initials(u.nickname || '?')}</div>
+      <div class="avatar" style="background:${me ? 'var(--primary)' : 'var(--text-secondary)'}">${initials(u.nickname || '?')}</div>
       <div class="grow">
         <div class="title">${esc(u.nickname)}${u.is_admin ? '<span class="badge admin">admin</span>' : ''}${me ? '<span class="badge" style="margin-left:6px">我</span>' : ''}</div>
         <div class="detail">${esc(u.email)} · ${u.projects} 個專案 · 註冊 ${esc(day)}</div>
       </div>
-      ${(me || founder) ? '' : `<button class="del-btn" style="color:${u.is_admin ? '#8e8e93' : '#ff9500'};font-size:13px;font-weight:700" onclick="app.adminToggleAdmin('${esc(u.id)}', ${u.is_admin ? 'false' : 'true'}, '${esc(u.nickname)}')">${u.is_admin ? '移除admin' : '設為admin'}</button>`}
+      ${(me || founder) ? '' : `<button class="del-btn" style="color:${u.is_admin ? 'var(--text-secondary)' : 'var(--warning)'};font-size:13px;font-weight:700" onclick="app.adminToggleAdmin('${esc(u.id)}', ${u.is_admin ? 'false' : 'true'}, '${esc(u.nickname)}')">${u.is_admin ? '移除admin' : '設為admin'}</button>`}
       ${(me || founder) ? '' : `<button class="del-btn" onclick="app.adminDeleteUser('${esc(u.id)}','${esc(u.nickname)}')">✕</button>`}
     </div>`;
   });
@@ -1205,12 +1205,12 @@ async function openAdminSheet() {
     const ti = TYPE_INFO[d.type] || TYPE_INFO.split;
     const t = String(r.updated_at || '').replace('T', ' ').slice(5, 16);
     html += `<div class="row" style="cursor:pointer" onclick="app.joinProject('${esc(r.code)}')">
-      <div class="avatar" style="background:#5856d6">${initials(r.name || '?')}</div>
+      <div class="avatar" style="background:var(--primary-2)">${initials(r.name || '?')}</div>
       <div class="grow">
         <div class="title">${esc(r.name)}<span class="type-tag ${ti.tag}">${ti.name}</span></div>
         <div class="detail">☁ ${esc(r.code)} · ${(d.members || []).length} 位成員 · ${(d.expenses || []).length} 筆 · 更新 ${esc(t)}</div>
       </div>
-      <button class="del-btn" style="color:#007aff" onclick="event.stopPropagation();app.adminRenameProject('${esc(r.code)}')">✎</button>
+      <button class="del-btn" style="color:var(--primary)" onclick="event.stopPropagation();app.adminRenameProject('${esc(r.code)}')">✎</button>
       <button class="del-btn" onclick="event.stopPropagation();app.adminDeleteCloudProject('${esc(r.code)}','${esc(r.name)}')">✕</button>
     </div>`;
   });
@@ -1223,7 +1223,7 @@ function openAuthSheet() {
     document.getElementById('sheetTitle').textContent = '我的帳號';
     const ava = authUser.avatar
       ? `<img class="avatar-img" src="${authUser.avatar}" alt="">`
-      : `<div class="avatar" style="background:#007aff">${initials(authUser.nickname)}</div>`;
+      : `<div class="avatar" style="background:var(--primary)">${initials(authUser.nickname)}</div>`;
     body.innerHTML = `
       <div class="card"><div class="row">
         ${ava}
@@ -1339,7 +1339,7 @@ function openProfileSheet() {
   document.getElementById('sheetTitle').textContent = '✎ 編輯個人資料';
   const cur = authUser.avatar
     ? `<img class="avatar-img big" src="${authUser.avatar}" alt="">`
-    : `<div class="avatar big" style="background:#007aff">${initials(authUser.nickname)}</div>`;
+    : `<div class="avatar big" style="background:var(--primary)">${initials(authUser.nickname)}</div>`;
   document.getElementById('sheetBody').innerHTML = `
     <div class="field" style="text-align:center">
       <div id="avatarPreview" style="display:flex;justify-content:center;margin-bottom:10px">${cur}</div>
