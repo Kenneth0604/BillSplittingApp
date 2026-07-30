@@ -1,7 +1,7 @@
 // 開機組裝：接線、全域橋、初始化
-import * as store from './store.js?v=16';
-import * as cloud from './cloud.js?v=16';
-import * as ui from './ui.js?v=16';
+import * as store from './store.js?v=17';
+import * as cloud from './cloud.js?v=17';
+import * as ui from './ui.js?v=17';
 
 // 1) 載入本機資料
 store.load();
@@ -74,6 +74,7 @@ window.app = {
 
 // 4) 首次渲染
 ui.render();
+ui.initSheetGestures(); // 表單下滑關閉
 
 // 5) 雲端同步與登入
 if (cloud.cloudOn()) {

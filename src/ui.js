@@ -1,17 +1,17 @@
 // UI 層：渲染、表單、事件處理（依賴 store / calc / cloud）
 import {
   data, proj, save, getCats, projKey, CATS, TYPE_INFO, CAT_COLORS,
-} from './store.js?v=16';
+} from './store.js?v=17';
 import {
   fmt, memberById, colorOf, initials, today, todayISO, esc, dateToISO,
   balances, settlements, ledgerStats,
   expenseBreakdown, toItems, memberPaidBreakdown, memberShareBreakdown, depositBreakdown,
   OP_LABEL, dispExpr, evalAmt, editAmt, losersOf,
-} from './calc.js?v=16';
+} from './calc.js?v=17';
 import {
   sb, cloudOn, authUser, isAdmin, setAuthUser, pullAll, syncMyProjects,
   genCode, projPayload, ADMIN_EMAILS, refreshAdminFlag,
-} from './cloud.js?v=16';
+} from './cloud.js?v=17';
 
 let currentPage = 'expenses';
 
@@ -165,7 +165,7 @@ function duoRow(e) {
     ${memberAvatar(memberById(avatarId))}
     <div class="grow">
       <div class="title">${e.desc || e.cat || '未命名支出'}</div>
-      <div class="detail">${e.desc && e.cat ? e.cat + ' · ' : ''}${payText} · ${splitText} · ${e.date}</div>
+      <div class="detail">${e.desc && e.cat ? e.cat + ' · ' : ''}${payText} · ${splitText} · ${e.date}${e.by ? ` · ${esc(e.by)} 記` : ''}</div>
     </div>
     <div class="amount">${fmt(e.amount)}</div>
     ${e.mode === 'random' && !e.revealed ? `<button class="del-btn" style="color:var(--warning)" onclick="app.revealRandom(${e.id})">🎲</button>` : ''}
@@ -197,6 +197,7 @@ function renderLedgerPage(type) {
     }
     const title = e.desc || e.cat || (isIn ? '收入' : '支出');
     if (e.desc && e.cat) detail = `${e.cat} · ${detail}`;
+    if (e.by) detail += ` · ${esc(e.by)} 記`;
     html += `<div class="row">
   ${avatar}
   <div class="grow"><div class="title">${title}</div><div class="detail">${detail}</div></div>
@@ -444,6 +445,8 @@ function commitRecord(rec) {
     save(); closeSheet(); toast('已更新 ✓'); render();
   } else {
     rec.id = proj().nextExpenseId++;
+    const who = chatName();
+    if (who) rec.by = who; // 記錄是誰新增的
     proj().expenses.push(rec);
     save(); closeSheet(); toast('已記帳 ✓'); render();
   }
@@ -879,6 +882,22 @@ function selectKind(el) {
   // 依收支切換分類選項
   const cc = document.getElementById('catChips');
   if (cc) cc.innerHTML = catChipsHTML(el.dataset.k);
+}
+// 表單視窗下滑關閉（在頂端往下滑約 90px 即收合）
+function initSheetGestures() {
+  const sheet = document.getElementById('sheet');
+  if (!sheet || !sheet.addEventListener) return;
+  let startY = null, startScroll = 0;
+  sheet.addEventListener('touchstart', (e) => {
+    startY = e.touches[0].clientY;
+    startScroll = sheet.scrollTop;
+  }, { passive: true });
+  sheet.addEventListener('touchend', (e) => {
+    if (startY == null) return;
+    const dy = e.changedTouches[0].clientY - startY;
+    if (dy > 90 && startScroll <= 0 && sheet.scrollTop <= 0) closeSheet();
+    startY = null;
+  }, { passive: true });
 }
 function closeSheet() {
   document.getElementById('mask').classList.remove('open');
@@ -1453,7 +1472,7 @@ function openHelpSheet() {
 
 export {
   toast, render, openAdminUsersSheet, adminDeleteUser, copySettlement, settleTransfer,
-  adminRenameProject, adminDeleteCloudProject,
+  adminRenameProject, adminDeleteCloudProject, initSheetGestures,
   isDuoMode, openCatEditSheet, saveCatEdit, updateExactSum,
   openProfileSheet, pickAvatar, saveProfile, adminToggleAdmin,
   openMemberEditSheet, pickMemberAvatar, clearMemberAvatar, saveMemberEdit,

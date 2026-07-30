@@ -833,7 +833,7 @@ body {
 .chat-input {
   display: flex;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 90px; /* 避開右下角 ＋ 按鈕 */
 }
 
 .chat-input input {
