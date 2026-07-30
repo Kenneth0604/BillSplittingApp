@@ -1,17 +1,17 @@
 // UI 層：渲染、表單、事件處理（依賴 store / calc / cloud）
 import {
   data, proj, save, getCats, projKey, CATS, TYPE_INFO, CAT_COLORS,
-} from './store.js?v=17';
+} from './store.js?v=18';
 import {
   fmt, memberById, colorOf, initials, today, todayISO, esc, dateToISO,
   balances, settlements, ledgerStats,
   expenseBreakdown, toItems, memberPaidBreakdown, memberShareBreakdown, depositBreakdown,
   OP_LABEL, dispExpr, evalAmt, editAmt, losersOf,
-} from './calc.js?v=17';
+} from './calc.js?v=18';
 import {
   sb, cloudOn, authUser, isAdmin, setAuthUser, pullAll, syncMyProjects,
   genCode, projPayload, ADMIN_EMAILS, refreshAdminFlag,
-} from './cloud.js?v=17';
+} from './cloud.js?v=18';
 
 let currentPage = 'expenses';
 
@@ -770,7 +770,7 @@ function randomFormHTML() {
   <div class="chips" id="candChips">${proj().members.map(m => `<div class="chip on" data-id="${m.id}" onclick="this.classList.toggle('on')">${m.name}</div>`).join('')}</div>
 </div>
 <div class="field"><label>抽幾個人一起買單？（均攤）</label>
-  <select id="inDrawN">${proj().members.map((_, i) => `<option value="${i + 1}">${i + 1} 人</option>`).join('')}</select>
+  <select id="inDrawN">${proj().members.slice(0, Math.max(1, proj().members.length - 1)).map((_, i) => `<option value="${i + 1}">${i + 1} 人</option>`).join('')}</select>
 </div>
 <div class="field"><label>公布時機</label>
   <div class="chips" id="revealChips">
