@@ -1,17 +1,17 @@
 // UI 層：渲染、表單、事件處理（依賴 store / calc / cloud）
 import {
   data, proj, save, getCats, projKey, CATS, TYPE_INFO, CAT_COLORS,
-} from './store.js?v=18';
+} from './store.js?v=19';
 import {
   fmt, memberById, colorOf, initials, today, todayISO, esc, dateToISO,
   balances, settlements, ledgerStats,
   expenseBreakdown, toItems, memberPaidBreakdown, memberShareBreakdown, depositBreakdown,
   OP_LABEL, dispExpr, evalAmt, editAmt, losersOf,
-} from './calc.js?v=18';
+} from './calc.js?v=19';
 import {
   sb, cloudOn, authUser, isAdmin, setAuthUser, pullAll, syncMyProjects,
   genCode, projPayload, ADMIN_EMAILS, refreshAdminFlag,
-} from './cloud.js?v=18';
+} from './cloud.js?v=19';
 
 let currentPage = 'expenses';
 
@@ -511,10 +511,21 @@ function openEditSheet(id) {
       });
       updateExactSum();
     } else {
-      // random：只能改金額/分類/說明/日期，不重抽
+      // random：顯示開獎結果；只能改金額/分類/說明/日期，不重抽
+      const ls = losersOf(e);
+      const names = ls.map(x => memberById(x)?.name || '?').join('、');
+      const candNames = (e.candidates || []).map(x => memberById(x)?.name || '?').join('、');
+      const resultLine = e.revealed
+        ? `🎲 開獎結果：<b>${esc(names)}</b> 要付${ls.length > 1 ? `（每人 ${fmt(e.amount / ls.length)}）` : ` ${fmt(e.amount)}`}`
+        : `🎲 尚未開獎｜參加抽籤：${esc(candNames)}`;
       area.innerHTML = `
+  <div class="card"><div style="padding:14px;font-size:14px;line-height:1.8">
+    ${resultLine}<br>
+    <span style="color:#8e8e93">${esc(memberById(e.payer)?.name || '?')} 先付 ${fmt(e.amount)} · ${esc(e.date)}</span>
+  </div></div>
+  ${e.revealed ? '' : `<button class="btn gray" onclick="app.closeSheet();app.revealRandom(${e.id})">🎲 立刻開獎</button><div style="height:10px"></div>`}
   <div class="field"><label>金額 (NT$)</label>${keypadHTML()}</div>
-  <div class="exact-sum">🎲 抽籤名單與結果不變（要重抽請刪除後重記一筆）</div>`;
+  <div class="exact-sum">名單與結果不會因編輯改變（要重抽請刪除後重記）</div>`;
       setAmtDisplay(e.amount);
     }
   } else {
