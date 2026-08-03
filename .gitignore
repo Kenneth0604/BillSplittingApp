@@ -1,0 +1,12 @@
+# Dependencies
+node_modules/
+
+# AI tool generated directories
+.afsmycoder/
+.kilo/
+.cursor/
+.roo/
+.windsurf/
+.aider*/
+.claude/
+.copilot/
