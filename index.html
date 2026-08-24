@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-title" content="算錢用ㄉ東西">
   <meta name="theme-color" content="#f3f1f9">
   <title>算錢用ㄉ東西</title>
-  <link rel="stylesheet" href="./style.css?v=19">
+  <link rel="stylesheet" href="./style.css?v=20">
 </head>
 
 <body>
@@ -23,6 +23,7 @@
           </div>
           <div style="display:flex;gap:8px">
             <div class="project-pill icon-pill" id="refreshBtn" onclick="app.manualRefresh()">🔄</div>
+            <div class="project-pill icon-pill" onclick="app.openDateSheet()">📅</div>
             <div class="project-pill icon-pill" onclick="app.openHelpSheet()">❓</div>
             <div class="project-pill" id="userPill" onclick="app.openAuthSheet()">👤 登入</div>
           </div>
@@ -83,7 +84,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script type="module" src="./src/main.js?v=19"></script>
+  <script type="module" src="./src/main.js?v=20"></script>
 </body>
 
 </html>

@@ -1,17 +1,17 @@
 // UI 層：渲染、表單、事件處理（依賴 store / calc / cloud）
 import {
   data, proj, save, getCats, projKey, CATS, TYPE_INFO, CAT_COLORS,
-} from './store.js?v=19';
+} from './store.js?v=20';
 import {
   fmt, memberById, colorOf, initials, today, todayISO, esc, dateToISO,
   balances, settlements, ledgerStats,
   expenseBreakdown, toItems, memberPaidBreakdown, memberShareBreakdown, depositBreakdown,
   OP_LABEL, dispExpr, evalAmt, editAmt, losersOf,
-} from './calc.js?v=19';
+} from './calc.js?v=20';
 import {
   sb, cloudOn, authUser, isAdmin, setAuthUser, pullAll, syncMyProjects,
   genCode, projPayload, ADMIN_EMAILS, refreshAdminFlag,
-} from './cloud.js?v=19';
+} from './cloud.js?v=20';
 
 let currentPage = 'expenses';
 
@@ -174,6 +174,27 @@ function duoRow(e) {
   </div>`;
 }
 
+// fund / personal 單筆紀錄列（renderLedgerPage 與「查看特定日期」共用）
+function ledgerRowHTML(e, isFund) {
+  const isIn = e.kind === 'in';
+  let detail = e.date;
+  let avatar = `<div class="avatar" style="background:${isIn ? 'var(--success)' : 'var(--danger)'}">${isIn ? '＋' : '－'}</div>`;
+  if (isFund && isIn) {
+    const m = memberById(e.payer);
+    avatar = `<div class="avatar" style="background:${colorOf(e.payer)}">${initials(m?.name || '?')}</div>`;
+    detail = `${m?.name || '?'} 存入 · ${e.date}`;
+  }
+  const title = e.desc || e.cat || (isIn ? '收入' : '支出');
+  if (e.desc && e.cat) detail = `${e.cat} · ${detail}`;
+  if (e.by) detail += ` · ${esc(e.by)} 記`;
+  return `<div class="row">
+  ${avatar}
+  <div class="grow"><div class="title">${title}</div><div class="detail">${detail}</div></div>
+  <div class="amount ${isIn ? 'pos' : 'neg'}">${isIn ? '+' : '−'}${fmt(e.amount)}</div>
+  <button class="del-btn" style="color:var(--primary)" onclick="app.openEditSheet(${e.id})">✎</button>
+  <button class="del-btn" onclick="app.delExpense(${e.id})">✕</button>
+</div>`;
+}
 // fund / personal 明細
 function renderLedgerPage(type) {
   let html = '';
@@ -186,27 +207,49 @@ function renderLedgerPage(type) {
 <div class="meta">${isFund ? '總存入' : '總收入'} ${fmt(s.tin)} · 總支出 ${fmt(s.tout)}</div></div>`;
   if (!proj().expenses.length) return html + `<div class="empty"><div class="icon">${isFund ? '🏦' : '📒'}</div><p>還沒有任何紀錄<br>點右下角 ＋ 新增第一筆</p></div>`;
   html += `<div class="card">`;
-  [...proj().expenses].reverse().forEach(e => {
-    const isIn = e.kind === 'in';
-    let detail = e.date;
-    let avatar = `<div class="avatar" style="background:${isIn ? 'var(--success)' : 'var(--danger)'}">${isIn ? '＋' : '－'}</div>`;
-    if (isFund && isIn) {
-      const m = memberById(e.payer);
-      avatar = `<div class="avatar" style="background:${colorOf(e.payer)}">${initials(m?.name || '?')}</div>`;
-      detail = `${m?.name || '?'} 存入 · ${e.date}`;
-    }
-    const title = e.desc || e.cat || (isIn ? '收入' : '支出');
-    if (e.desc && e.cat) detail = `${e.cat} · ${detail}`;
-    if (e.by) detail += ` · ${esc(e.by)} 記`;
-    html += `<div class="row">
-  ${avatar}
-  <div class="grow"><div class="title">${title}</div><div class="detail">${detail}</div></div>
-  <div class="amount ${isIn ? 'pos' : 'neg'}">${isIn ? '+' : '−'}${fmt(e.amount)}</div>
-  <button class="del-btn" style="color:var(--primary)" onclick="app.openEditSheet(${e.id})">✎</button>
-  <button class="del-btn" onclick="app.delExpense(${e.id})">✕</button>
-</div>`;
-  });
+  [...proj().expenses].reverse().forEach(e => { html += ledgerRowHTML(e, isFund); });
   return html + `</div>`;
+}
+
+/* ---------- 依日期查看 ---------- */
+// 把 <input type="date"> 的 ISO 值換成紀錄裡儲存的 "M/D" 格式（不含年份）
+function isoToMD(v) {
+  if (!v) return null;
+  const p = String(v).split('-');
+  if (p.length !== 3) return null;
+  return `${+p[1]}/${+p[2]}`;
+}
+function openDateSheet() {
+  document.getElementById('sheetTitle').textContent = '📅 查看特定日期';
+  document.getElementById('sheetBody').innerHTML = `
+  <div class="field"><label>選擇日期</label><input id="inViewDate" type="date" value="${todayISO()}" onchange="app.renderDateResults()"></div>
+  <div id="dateResults"></div>`;
+  document.getElementById('mask').classList.add('open');
+  document.getElementById('sheet').classList.add('open');
+  renderDateResults();
+}
+function renderDateResults() {
+  const el = document.getElementById('dateResults');
+  if (!el) return;
+  const md = isoToMD(document.getElementById('inViewDate')?.value);
+  const type = proj().type;
+  const isFund = type === 'fund';
+  const list = proj().expenses.filter(e => e.date === md);
+  if (!list.length) {
+    el.innerHTML = `<div class="empty"><div class="icon">📅</div><p>${esc(md || '')} 這天沒有紀錄</p></div>`;
+    return;
+  }
+  let tin = 0, tout = 0;
+  list.forEach(e => {
+    if (type === 'split') { if (!e.settle) tout += e.amount; }
+    else if (e.kind === 'in') tin += e.amount; else tout += e.amount;
+  });
+  const summary = type === 'split'
+    ? `<div class="stat-card"><div class="label">${esc(md)} 支出合計</div><div class="big">${fmt(tout)}</div></div>`
+    : `<div class="stat-card ${isFund ? 'green' : 'purple'}"><div class="label">${esc(md)} 收支</div><div class="big">${fmt(tin - tout)}</div><div class="meta">${isFund ? '總存入' : '總收入'} ${fmt(tin)} · 總支出 ${fmt(tout)}</div></div>`;
+  let rows = '';
+  [...list].reverse().forEach(e => { rows += type === 'split' ? duoRow(e) : ledgerRowHTML(e, isFund); });
+  el.innerHTML = summary + `<div class="card">${rows}</div>`;
 }
 
 function renderMembersPage(type) {
@@ -471,6 +514,8 @@ function openEditSheet(id) {
   const duoSimple = type === 'split' && isDuoMode() && !!e.duo; // 雙人直記欠帳紀錄
   openSheet(type === 'split' && isDuoMode() && !e.duo); // 其他紀錄（均分/特定/隨機）用完整表單
   editingId = id;
+  const submitBtn = document.getElementById('submitBtn');
+  if (submitBtn) submitBtn.textContent = '更新';
   if (duoSimple) {
     // 雙人簡化表單：只回填分類/說明/日期/付款人/金額
     document.getElementById('sheetTitle').textContent = '✎ 編輯支出';
@@ -625,7 +670,7 @@ function openSheet(forceFull = false) {
   <div class="field"><label>日期</label><input id="inDate" type="date" value="${todayISO()}"></div>
   <div class="field"><label>誰先付的？</label><select id="inPayer">${proj().members.map(m => `<option value="${m.id}">${m.name}</option>`).join('')}</select></div>
   <div class="field"><label>金額 (NT$)＝對方欠的錢</label>${keypadHTML()}</div>
-  <button class="btn" onclick="app.addExpense()">記一筆</button>`;
+  <button class="btn" id="submitBtn" onclick="app.addExpense()">記一筆</button>`;
     document.getElementById('mask').classList.add('open');
     document.getElementById('sheet').classList.add('open');
     return;
@@ -643,7 +688,7 @@ function openSheet(forceFull = false) {
       <div class="chip" data-m="random" onclick="app.selectMode(this)">🎲 隨機付款</div>
     </div></div>
   <div id="modeArea">${exactFormHTML()}</div>
-  <button class="btn" onclick="app.addExpense()">記一筆</button>`;
+  <button class="btn" id="submitBtn" onclick="app.addExpense()">記一筆</button>`;
   } else {
     // fund / personal 紀錄
     const isFund = type === 'fund';
@@ -660,7 +705,7 @@ function openSheet(forceFull = false) {
   <div class="field"><label>詳細說明（選填）</label><input id="inDesc" placeholder="例如：鐵板燒、七月月費"></div>
   <div class="field"><label>日期</label><input id="inDate" type="date" value="${todayISO()}"></div>
   <div class="field"><label>金額 (NT$)</label>${keypadHTML()}</div>
-  <button class="btn" onclick="app.addLedgerRecord()">記一筆</button>`;
+  <button class="btn" id="submitBtn" onclick="app.addLedgerRecord()">記一筆</button>`;
   }
   document.getElementById('mask').classList.add('open');
   sheet.classList.add('open');
@@ -1489,4 +1534,5 @@ export {
   openProfileSheet, pickAvatar, saveProfile, adminToggleAdmin,
   openMemberEditSheet, pickMemberAvatar, clearMemberAvatar, saveMemberEdit,
   switchTab, selectProjType, selectMode, selectReveal, selectKind, revealRandom, openEditSheet, focusCell, delMember, delExpense, closeSheet, switchProject, selectCat, renameProject, openSheet, openProjectSheet, openMemberSheet, openHelpSheet, openCatSheet, openAuthSheet, openAdminSheet, markSettled, manualRefresh, kp, joinProject, joinByCode, fillEqualSpend, doSignup, doLogout, doLogin, delProject, delCat, cloudAction, changeNick, addProject, addMember, addLedgerRecord, addExpense, addChat, addCat,
+  openDateSheet, renderDateResults,
 };

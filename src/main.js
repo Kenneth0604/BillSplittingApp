@@ -1,7 +1,7 @@
 // 開機組裝：接線、全域橋、初始化
-import * as store from './store.js?v=19';
-import * as cloud from './cloud.js?v=19';
-import * as ui from './ui.js?v=19';
+import * as store from './store.js?v=20';
+import * as cloud from './cloud.js?v=20';
+import * as ui from './ui.js?v=20';
 
 // 1) 載入本機資料
 store.load();
@@ -70,6 +70,8 @@ window.app = {
   addExpense: ui.addExpense,
   addChat: ui.addChat,
   addCat: ui.addCat,
+  openDateSheet: ui.openDateSheet,
+  renderDateResults: ui.renderDateResults,
 };
 
 // 4) 首次渲染
