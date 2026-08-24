@@ -202,6 +202,7 @@ function renderLedgerPage(type) {
   ${avatar}
   <div class="grow"><div class="title">${title}</div><div class="detail">${detail}</div></div>
   <div class="amount ${isIn ? 'pos' : 'neg'}">${isIn ? '+' : '−'}${fmt(e.amount)}</div>
+  <button class="del-btn" style="color:var(--primary)" onclick="app.openEditSheet(${e.id})">✎</button>
   <button class="del-btn" onclick="app.delExpense(${e.id})">✕</button>
 </div>`;
   });
