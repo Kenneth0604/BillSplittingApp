@@ -1,17 +1,17 @@
 // UI 層：渲染、表單、事件處理（依賴 store / calc / cloud）
 import {
   data, proj, save, getCats, projKey, CATS, TYPE_INFO, CAT_COLORS,
-} from './store.js?v=20';
+} from './store.js?v=21';
 import {
   fmt, memberById, colorOf, initials, today, todayISO, esc, dateToISO,
   balances, settlements, ledgerStats,
   expenseBreakdown, toItems, memberPaidBreakdown, memberShareBreakdown, depositBreakdown,
   OP_LABEL, dispExpr, evalAmt, editAmt, losersOf,
-} from './calc.js?v=20';
+} from './calc.js?v=21';
 import {
   sb, cloudOn, authUser, isAdmin, setAuthUser, pullAll, syncMyProjects,
   genCode, projPayload, ADMIN_EMAILS, refreshAdminFlag,
-} from './cloud.js?v=20';
+} from './cloud.js?v=21';
 
 let currentPage = 'expenses';
 
@@ -1493,46 +1493,12 @@ async function manualRefresh() {
   }
 }
 
-/* ---------- 使用說明（Help） ---------- */
-function openHelpSheet() {
-  document.getElementById('sheetTitle').textContent = '❓ 使用說明';
-  document.getElementById('sheetBody').innerHTML = `
-    <div class="section-title">專案</div>
-    <div class="card"><div style="padding:14px;font-size:14px;line-height:1.8">
-      點左上角 <b>📁 專案列</b> 切換或建立專案。三種類型：<b>多人分帳</b>（記支出、算誰欠誰）、<b>共同基金</b>（先存錢再花）、<b>個人記帳</b>（自己的收支）。
-    </div></div>
-    <div class="section-title">記帳</div>
-    <div class="card"><div style="padding:14px;font-size:14px;line-height:1.8">
-      點右下 <b>＋</b>：選分類 → 填說明（選填）→ 選分帳方式：<b>特定付款</b>（逐人填先付/支出）、<b>均分</b>、<b>🎲 隨機付款</b>（抽人買單，可選立刻或結帳時開獎）→ 用數字鍵盤輸入金額。
-    </div></div>
-    <div class="section-title">結算</div>
-    <div class="card"><div style="padding:14px;font-size:14px;line-height:1.8">
-      <b>結算</b>頁自動算出「最少轉帳方案」（誰付給誰多少），附誰先付、誰花得多、支出分類三張圓餅圖。未開獎的隨機付款要先按「開獎」才列入。
-    </div></div>
-    <div class="section-title">自訂</div>
-    <div class="card"><div style="padding:14px;font-size:14px;line-height:1.8">
-      <b>自訂</b>頁管理成員與分類（可自行新增 emoji 分類，點 ✕ 刪除）。
-    </div></div>
-    <div class="section-title">雲端多人共用</div>
-    <div class="card"><div style="padding:14px;font-size:14px;line-height:1.8">
-      右上角 <b>👤</b> 註冊登入 → 專案旁 <b>☁</b> 上雲取得 6 碼代碼 → 朋友登入後輸入代碼加入，帳目與留言自動同步。登入後換裝置，專案清單會自動跟著你。
-    </div></div>
-    <div class="section-title">留言區</div>
-    <div class="card"><div style="padding:14px;font-size:14px;line-height:1.8">
-      記記頁最下方可以留言。暱稱每個專案可以不同，改暱稱直接改留言列的名字欄即可。
-    </div></div>
-    <button class="btn" onclick="app.closeSheet()">知道了！</button>`;
-  document.getElementById('mask').classList.add('open');
-  document.getElementById('sheet').classList.add('open');
-}
-
-
 export {
   toast, render, openAdminUsersSheet, adminDeleteUser, copySettlement, settleTransfer,
   adminRenameProject, adminDeleteCloudProject, initSheetGestures,
   isDuoMode, openCatEditSheet, saveCatEdit, updateExactSum,
   openProfileSheet, pickAvatar, saveProfile, adminToggleAdmin,
   openMemberEditSheet, pickMemberAvatar, clearMemberAvatar, saveMemberEdit,
-  switchTab, selectProjType, selectMode, selectReveal, selectKind, revealRandom, openEditSheet, focusCell, delMember, delExpense, closeSheet, switchProject, selectCat, renameProject, openSheet, openProjectSheet, openMemberSheet, openHelpSheet, openCatSheet, openAuthSheet, openAdminSheet, markSettled, manualRefresh, kp, joinProject, joinByCode, fillEqualSpend, doSignup, doLogout, doLogin, delProject, delCat, cloudAction, changeNick, addProject, addMember, addLedgerRecord, addExpense, addChat, addCat,
+  switchTab, selectProjType, selectMode, selectReveal, selectKind, revealRandom, openEditSheet, focusCell, delMember, delExpense, closeSheet, switchProject, selectCat, renameProject, openSheet, openProjectSheet, openMemberSheet, openCatSheet, openAuthSheet, openAdminSheet, markSettled, manualRefresh, kp, joinProject, joinByCode, fillEqualSpend, doSignup, doLogout, doLogin, delProject, delCat, cloudAction, changeNick, addProject, addMember, addLedgerRecord, addExpense, addChat, addCat,
   openDateSheet, renderDateResults,
 };

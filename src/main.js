@@ -1,7 +1,7 @@
 // 開機組裝：接線、全域橋、初始化
-import * as store from './store.js?v=20';
-import * as cloud from './cloud.js?v=20';
-import * as ui from './ui.js?v=20';
+import * as store from './store.js?v=21';
+import * as cloud from './cloud.js?v=21';
+import * as ui from './ui.js?v=21';
 
 // 1) 載入本機資料
 store.load();
@@ -47,7 +47,6 @@ window.app = {
   openSheet: ui.openSheet,
   openProjectSheet: ui.openProjectSheet,
   openMemberSheet: ui.openMemberSheet,
-  openHelpSheet: ui.openHelpSheet,
   openCatSheet: ui.openCatSheet,
   openAuthSheet: ui.openAuthSheet,
   openAdminSheet: ui.openAdminSheet,
@@ -88,11 +87,3 @@ if (cloud.cloudOn()) {
   cloud.pullAll();
   cloud.initAuth();
 }
-
-// 6) 第一次開啟 app：提示並自動打開使用說明
-try {
-  if (!localStorage.getItem('helpSeen')) {
-    localStorage.setItem('helpSeen', '1');
-    setTimeout(() => { ui.toast('第一次使用嗎？先看看使用說明 👋'); ui.openHelpSheet(); }, 600);
-  }
-} catch (e) { }
