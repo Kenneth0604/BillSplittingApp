@@ -1,0 +1,12 @@
+{
+  "appId": "app.kennethlin.billsplitting",
+  "appName": "算錢用ㄉ東西",
+  "webDir": "www",
+  "backgroundColor": "#F2F2F7",
+  "ios": {
+    "contentInset": "always"
+  },
+  "android": {
+    "backgroundColor": "#F2F2F7"
+  }
+}
