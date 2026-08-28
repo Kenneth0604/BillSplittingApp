@@ -12,34 +12,78 @@ body {
 }
 
 :root {
-  --primary: #4f46e5;
-  --primary-2: #7c3aed;
-  --primary-deep: #3730a3;
-  --primary-soft: #edecfb;
-  --success: #0f9d63;
-  --success-soft: #e3f6ec;
-  --danger: #e11d48;
-  --danger-soft: #fce9ed;
-  --warning: #c2760d;
-  --warning-soft: #fbf0dd;
-  --purple: #9333ea;
-  --purple-soft: #f4ebfd;
-  --teal: #0d9488;
-  --bg: #f3f1f9;
-  --surface: #ffffff;
-  --surface-alt: #edebf6;
-  --text: #17172b;
-  --text-secondary: #6f6f86;
-  --text-tertiary: #a4a4b8;
-  --hairline: rgba(23, 23, 43, .08);
-  --shadow-sm: 0 1px 2px rgba(30, 20, 90, .06);
-  --shadow-card: 0 8px 22px -8px rgba(35, 24, 90, .16), 0 2px 6px rgba(35, 24, 90, .05);
-  --shadow-glow: 0 10px 22px -6px rgba(79, 70, 229, .45);
+  /* iOS system colors (light) */
+  --primary: #007AFF;
+  /* System Blue */
+  --primary-2: #007AFF;
+  --primary-deep: #0040DD;
+  --primary-soft: rgba(0, 122, 255, .12);
+  --success: #34C759;
+  /* System Green */
+  --success-soft: rgba(52, 199, 89, .12);
+  --danger: #FF3B30;
+  /* System Red */
+  --danger-soft: rgba(255, 59, 48, .12);
+  --warning: #FF9500;
+  /* System Orange */
+  --warning-soft: rgba(255, 149, 0, .12);
+  --purple: #AF52DE;
+  /* System Purple */
+  --purple-soft: rgba(175, 82, 222, .12);
+  --teal: #30B0C7;
+  /* System Teal */
+  --bg: #F2F2F7;
+  /* systemGroupedBackground */
+  --surface: #FFFFFF;
+  /* secondarySystemGroupedBackground */
+  --surface-alt: #E5E5EA;
+  /* systemGray5 */
+  --text: #000000;
+  /* label */
+  --text-secondary: rgba(60, 60, 67, .6);
+  /* secondaryLabel */
+  --text-tertiary: rgba(60, 60, 67, .3);
+  /* tertiaryLabel */
+  --hairline: rgba(60, 60, 67, .29);
+  /* separator */
+  --shadow-sm: 0 1px 1px rgba(0, 0, 0, .04);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, .06);
+  --shadow-glow: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary: #0A84FF;
+    --primary-2: #0A84FF;
+    --primary-deep: #409CFF;
+    --primary-soft: rgba(10, 132, 255, .18);
+    --success: #30D158;
+    --success-soft: rgba(48, 209, 88, .18);
+    --danger: #FF453A;
+    --danger-soft: rgba(255, 69, 58, .18);
+    --warning: #FF9F0A;
+    --warning-soft: rgba(255, 159, 10, .18);
+    --purple: #BF5AF2;
+    --purple-soft: rgba(191, 90, 242, .18);
+    --teal: #40C8E0;
+    --bg: #000000;
+    /* systemGroupedBackground (dark) */
+    --surface: #1C1C1E;
+    /* secondarySystemGroupedBackground (dark) */
+    --surface-alt: #2C2C2E;
+    /* systemGray5 (dark) */
+    --text: #FFFFFF;
+    --text-secondary: rgba(235, 235, 245, .6);
+    --text-tertiary: rgba(235, 235, 245, .3);
+    --hairline: rgba(84, 84, 88, .65);
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, .5);
+  }
 }
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Helvetica Neue", sans-serif;
-  background: radial-gradient(120% 100% at 20% 0%, #efe9fb 0%, #e3e6f7 45%, #dcdcec 100%);
+  -webkit-font-smoothing: antialiased;
+  background: var(--bg);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -79,13 +123,11 @@ body {
 }
 
 .navbar h1 {
-  font-size: 30px;
-  font-weight: 800;
-  letter-spacing: -.6px;
-  background: linear-gradient(100deg, var(--text) 40%, var(--primary) 120%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  /* iOS Large Title */
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -.4px;
+  color: var(--text);
 }
 
 .navbar .sub {
@@ -245,7 +287,7 @@ body {
   width: 30px;
   height: 3px;
   border-radius: 0 0 3px 3px;
-  background: linear-gradient(90deg, var(--primary), var(--primary-2));
+  background: var(--primary);
 }
 
 /* Cards & lists */
@@ -349,33 +391,21 @@ body {
 /* 大數字統計 */
 .stat-card {
   position: relative;
-  background: linear-gradient(135deg, #4f46e5, #7c3aed 65%, #a855f7);
+  background: var(--primary);
   color: #fff;
-  border-radius: 20px;
+  border-radius: 16px;
   padding: 20px;
   margin-bottom: 14px;
   overflow: hidden;
-  box-shadow: 0 14px 28px -10px rgba(79, 70, 229, .45);
-}
-
-.stat-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, .28), transparent 55%),
-    radial-gradient(80% 60% at 100% 120%, rgba(255, 255, 255, .12), transparent 60%);
-  pointer-events: none;
+  box-shadow: var(--shadow-card);
 }
 
 .stat-card.green {
-  background: linear-gradient(135deg, #0f9d63, #0d9488 70%, #14b8a6);
-  box-shadow: 0 14px 28px -10px rgba(15, 157, 99, .45);
+  background: var(--success);
 }
 
 .stat-card.purple {
-  background: linear-gradient(135deg, #9333ea, #7c3aed 60%, #4f46e5);
-  box-shadow: 0 14px 28px -10px rgba(147, 51, 234, .45);
+  background: var(--purple);
 }
 
 .stat-card .label {
@@ -405,23 +435,21 @@ body {
 .btn {
   display: block;
   width: 100%;
+  min-height: 44px;
   padding: 15px;
   border: none;
-  border-radius: 14px;
-  background: linear-gradient(135deg, var(--primary), var(--primary-2));
+  border-radius: 12px;
+  background: var(--primary);
   color: #fff;
   font-size: 17px;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
   font-family: inherit;
-  box-shadow: var(--shadow-glow);
-  transition: transform .15s, box-shadow .15s;
+  transition: opacity .15s;
 }
 
 .btn:active {
-  opacity: .92;
-  transform: scale(.98);
-  box-shadow: 0 4px 12px -4px rgba(79, 70, 229, .4);
+  opacity: .6;
 }
 
 .btn.gray {
@@ -437,22 +465,22 @@ body {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary), var(--primary-2));
+  background: var(--primary);
   color: #fff;
   border: none;
   font-size: 30px;
-  box-shadow: 0 10px 22px -4px rgba(79, 70, 229, .55), 0 0 0 4px rgba(255, 255, 255, .5);
+  box-shadow: var(--shadow-card);
   cursor: pointer;
   z-index: 40;
   display: flex;
   align-items: center;
   justify-content: center;
   line-height: 1;
-  transition: transform .15s;
+  transition: opacity .15s;
 }
 
 .fab:active {
-  transform: scale(.92);
+  opacity: .6;
 }
 
 .del-btn {
@@ -808,7 +836,7 @@ body {
 }
 
 .chat-row.mine .chat-bubble {
-  background: linear-gradient(135deg, var(--primary), var(--primary-2));
+  background: var(--primary);
   color: #fff;
 }
 
@@ -860,7 +888,7 @@ body {
 .chat-send {
   border: none;
   border-radius: 12px;
-  background: linear-gradient(135deg, var(--primary), var(--primary-2));
+  background: var(--primary);
   color: #fff;
   font-size: 14px;
   font-weight: 600;
@@ -871,7 +899,7 @@ body {
 }
 
 .chat-send:active {
-  opacity: .75;
+  opacity: .6;
 }
 
 .avatar-img {
@@ -973,7 +1001,7 @@ body {
 .arrow-line {
   width: 100%;
   height: 2px;
-  background: linear-gradient(90deg, var(--primary-soft), var(--primary));
+  background: var(--hairline);
   border-radius: 1px;
   position: relative;
 }
