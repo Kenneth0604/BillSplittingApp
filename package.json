@@ -2,6 +2,7 @@
   "name": "billsplittingapp",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "算錢用ㄉ東西：多人分帳／共同基金／個人記帳網頁 App，透過 Capacitor 包裝成 iOS/Android WebView App",
   "scripts": {
     "build:web": "node tools/build-web.mjs",
