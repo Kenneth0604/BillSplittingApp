@@ -1,5 +1,6 @@
 // 雲端層：Supabase 連線、同步、身分（依賴 store；UI 透過 hooks 注入）
 import { data, proj } from './store.js?v=21';
+import { esc } from './calc.js?v=21';
 
 // UI 掛勾（main.js 接上 toast/render，避免循環相依）
 export const hooks = { toast: () => { }, render: () => { } };
@@ -16,7 +17,7 @@ try {
   if (SUPABASE_URL && SUPABASE_KEY && window.supabase) {
     sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   }
-} catch (e) { sb = null; }
+} catch (e) { sb = null; console.error('[cloud] Supabase 初始化失敗：', e); }
 const cloudOn = () => !!sb;
 
 function genCode() {
@@ -96,9 +97,9 @@ function updateUserPill() {
   const el = document.getElementById('userPill');
   if (!el) return;
   if (!authUser) { el.textContent = '👤 登入'; return; }
-  const nickEsc = String(authUser.nickname).replace(/</g, '&lt;');
+  const nickEsc = esc(authUser.nickname);
   const ava = authUser.avatar
-    ? `<img class="pill-avatar" src="${authUser.avatar}" alt="">`
+    ? `<img class="pill-avatar" src="${esc(authUser.avatar)}" alt="">`
     : '👤';
   el.innerHTML = `${ava} ${nickEsc}${isAdmin() ? ' 🛡️' : ''}`;
 }
@@ -109,7 +110,7 @@ async function refreshAdminFlag() {
   try {
     const { data: flag } = await sb.rpc('is_admin');
     adminFlag = !!flag;
-  } catch (e) { adminFlag = false; }
+  } catch (e) { adminFlag = false; console.error('[cloud] refreshAdminFlag 失敗：', e); }
   updateUserPill();
   hooks.render();
 }
@@ -146,7 +147,7 @@ async function initAuth() {
     const { data: { session } } = await sb.auth.getSession();
     setAuthUser(session && session.user);
     sb.auth.onAuthStateChange((_e, s) => setAuthUser(s && s.user));
-  } catch (e) { }
+  } catch (e) { console.error('[cloud] initAuth 失敗：', e); }
 }
 
 export { cloudOn, genCode, projPayload, pushProject, schedulePush, pullAll, isAdmin, ADMIN_EMAILS, setAuthUser, syncMyProjects, initAuth, refreshAdminFlag, updateUserPill };

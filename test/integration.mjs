@@ -91,6 +91,16 @@ const catN = store.getCats('out').length;
 ui.delCat('out', catN-1);
 t('刪除分類', store.getCats('out').length===catN-1);
 
+// ---- 分類名稱 XSS（分類為自由輸入文字，渲染於成員頁的分類管理清單）----
+ui.switchTab('members');
+ui.openCatSheet('out','支出分類');
+gid('inCat').value = '<img src=x onerror=alert(1)>';
+ui.addCat('out');
+ui.switchTab('members');
+t('分類名稱 XSS 跳脫（不應含未轉義的 <img）', !gid('content').innerHTML.includes('<img src=x onerror'));
+t('分類名稱 XSS 應被轉義為 HTML 實體', gid('content').innerHTML.includes('&lt;img src=x onerror=alert(1)&gt;'));
+ui.delCat('out', store.getCats('out').indexOf('<img src=x onerror=alert(1)>'));
+
 // ---- 成員 ----
 ui.switchTab('members');
 gid('inName').value='新人';
@@ -134,6 +144,10 @@ qsaResult['#catChips .chip.on'] = chipOn({c:'💰 薪水'});
 gid('amtInput').value = '67*2';   // 桌面可打算式
 ui.addLedgerRecord();
 t('個人收入（運算式）', calc.ledgerStats().tin===134);
+const tinBefore = calc.ledgerStats().tin;
+gid('amtInput').value = '1/0';    // 除以零 → Infinity，應被擋下不可入帳
+ui.addLedgerRecord();
+t('除以零金額（Infinity）應被擋下', calc.ledgerStats().tin===tinBefore);
 ui.switchTab('settle'); ui.switchTab('expenses');
 
 // ---- 專案管理 ----
@@ -148,6 +162,30 @@ t('切回主專案', store.proj().id===1);
 // ---- 持久化 ----
 store.load();
 t('save/load 一致', store.data.projects.length===2 && store.proj().expenses.length>0);
+
+// ---- 損毀資料容錯 ----
+const goodSnapshot = localStorage.getItem('splitapp');
+localStorage.setItem('splitapp', '{not valid json');
+const corrupted1 = store.load();
+t('損毀 JSON 應偵測為 corrupted 並 fallback 為預設資料', corrupted1===true && store.data.projects.length>0);
+localStorage.setItem('splitapp', JSON.stringify({ projects: [{ id: 1 }], currentProjectId: 1 }));
+const corrupted2 = store.load();
+t('缺少 members/expenses 欄位應偵測為 corrupted 並 fallback', corrupted2===true && Array.isArray(store.proj().members));
+localStorage.setItem('splitapp', goodSnapshot); // 還原正常資料，避免影響後續測試
+const corrupted3 = store.load();
+t('正常資料重新載入不應被誤判為 corrupted', corrupted3===false && store.data.projects.length===2);
+
+// ---- save() 寫入失敗應回報，不應靜默失敗 ----
+let saveErrorCaught = null;
+store.setOnSaveError(e => { saveErrorCaught = e; });
+const realSetItem = localStorage.setItem;
+localStorage.setItem = () => { throw new Error('QuotaExceededError'); };
+const saveOk = store.save();
+t('save() 寫入失敗應回傳 false', saveOk===false);
+t('save() 寫入失敗應觸發 onSaveError', saveErrorCaught instanceof Error);
+localStorage.setItem = realSetItem;
+store.setOnSaveError(() => {});
+store.save(); // 恢復正常寫入，避免影響後續測試
 
 // ---- 雲端（未設定模式） ----
 t('未設定雲端 cloudOn=false', cloud.cloudOn()===false);

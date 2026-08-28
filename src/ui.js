@@ -6,7 +6,7 @@ import {
   fmt, memberById, colorOf, initials, today, todayISO, esc, dateToISO,
   balances, settlements, ledgerStats,
   expenseBreakdown, toItems, memberPaidBreakdown, memberShareBreakdown, depositBreakdown,
-  OP_LABEL, dispExpr, evalAmt, editAmt, losersOf,
+  OP_LABEL, dispExpr, evalAmt, editAmt, losersOf, isValidAmount,
 } from './calc.js?v=21';
 import {
   sb, cloudOn, authUser, isAdmin, setAuthUser, pullAll, syncMyProjects,
@@ -32,7 +32,7 @@ function toast(msg) {
 /* ---------- 分類與圓餅圖 ---------- */
 function catChipsHTML(kind) {
   return getCats(kind).map((c, i) =>
-    `<div class="chip ${i === 0 ? 'on' : ''}" data-c="${c}" onclick="app.selectCat(this)">${c}</div>`).join('');
+    `<div class="chip ${i === 0 ? 'on' : ''}" data-c="${esc(c)}" onclick="app.selectCat(this)">${esc(c)}</div>`).join('');
 }
 function selectCat(el) {
   document.querySelectorAll('#catChips .chip').forEach(c => c.classList.remove('on'));
@@ -144,28 +144,28 @@ function duoRow(e) {
       let avatarId, payText, splitText;
       if (e.mode === 'random') {
         avatarId = e.payer;
-        payText = (memberById(e.payer)?.name || '?') + ' 先付';
-        splitText = e.revealed ? `🎲 ${losersOf(e).map(id => memberById(id)?.name || '?').join('、')} 買單` : '🎲 未開獎';
+        payText = esc(memberById(e.payer)?.name || '?') + ' 先付';
+        splitText = e.revealed ? `🎲 ${esc(losersOf(e).map(id => memberById(id)?.name || '?').join('、'))} 買單` : '🎲 未開獎';
       } else if (e.mode === 'exact') {
         const pids = Object.keys(e.paid || {}).map(Number);
         avatarId = pids[0] || 0;
-        payText = pids.map(id => memberById(id)?.name || '?').join('、') + ' 先付';
+        payText = esc(pids.map(id => memberById(id)?.name || '?').join('、')) + ' 先付';
         if (e.duo) {
           const otherId = Object.keys(e.spent || {}).map(Number)[0];
-          splitText = `${memberById(otherId)?.name || '對方'} 欠全額`;
+          splitText = `${esc(memberById(otherId)?.name || '對方')} 欠全額`;
         } else {
           splitText = e.settle ? '💸 清償' : '特定分帳';
         }
       } else {
         avatarId = e.payer;
-        payText = (memberById(e.payer)?.name || '?') + ' 先付';
+        payText = esc(memberById(e.payer)?.name || '?') + ' 先付';
         splitText = `${e.splitters.length} 人分攤`;
       }
       return `<div class="row">
     ${memberAvatar(memberById(avatarId))}
     <div class="grow">
-      <div class="title">${e.desc || e.cat || '未命名支出'}</div>
-      <div class="detail">${e.desc && e.cat ? e.cat + ' · ' : ''}${payText} · ${splitText} · ${e.date}${e.by ? ` · ${esc(e.by)} 記` : ''}</div>
+      <div class="title">${esc(e.desc || e.cat || '未命名支出')}</div>
+      <div class="detail">${e.desc && e.cat ? esc(e.cat) + ' · ' : ''}${payText} · ${splitText} · ${e.date}${e.by ? ` · ${esc(e.by)} 記` : ''}</div>
     </div>
     <div class="amount">${fmt(e.amount)}</div>
     ${e.mode === 'random' && !e.revealed ? `<button class="del-btn" style="color:var(--warning)" onclick="app.revealRandom(${e.id})">🎲</button>` : ''}
@@ -181,11 +181,11 @@ function ledgerRowHTML(e, isFund) {
   let avatar = `<div class="avatar" style="background:${isIn ? 'var(--success)' : 'var(--danger)'}">${isIn ? '＋' : '－'}</div>`;
   if (isFund && isIn) {
     const m = memberById(e.payer);
-    avatar = `<div class="avatar" style="background:${colorOf(e.payer)}">${initials(m?.name || '?')}</div>`;
-    detail = `${m?.name || '?'} 存入 · ${e.date}`;
+    avatar = `<div class="avatar" style="background:${colorOf(e.payer)}">${esc(initials(m?.name || '?'))}</div>`;
+    detail = `${esc(m?.name || '?')} 存入 · ${e.date}`;
   }
-  const title = e.desc || e.cat || (isIn ? '收入' : '支出');
-  if (e.desc && e.cat) detail = `${e.cat} · ${detail}`;
+  const title = esc(e.desc || e.cat || (isIn ? '收入' : '支出'));
+  if (e.desc && e.cat) detail = `${esc(e.cat)} · ${detail}`;
   if (e.by) detail += ` · ${esc(e.by)} 記`;
   return `<div class="row">
   ${avatar}
@@ -299,7 +299,7 @@ function renderMembersPage(type) {
     html += `<div class="section-title">${g.label}（點 ✕ 刪除）</div>
   <div class="card"><div style="padding:14px"><div class="chips">`;
     getCats(g.kind).forEach((c, i) => {
-      html += `<div class="chip" onclick="app.openCatEditSheet('${g.kind}',${i})" style="cursor:pointer">${c}<span class="x" onclick="event.stopPropagation();app.delCat('${g.kind}',${i})">✕</span></div>`;
+      html += `<div class="chip" onclick="app.openCatEditSheet('${g.kind}',${i})" style="cursor:pointer">${esc(c)}<span class="x" onclick="event.stopPropagation();app.delCat('${g.kind}',${i})">✕</span></div>`;
     });
     html += `</div></div></div>
   <button class="btn gray" onclick="app.openCatSheet('${g.kind}','${g.label}')">＋ 新增${g.label}</button>`;
@@ -317,8 +317,8 @@ function renderSettlePage(type) {
       pending.forEach(e => {
         html += `<div class="row">
       <div class="avatar" style="background:var(--warning)">🎲</div>
-      <div class="grow"><div class="title">${e.desc || e.cat || '神秘支出'}</div>
-        <div class="detail">${memberById(e.payer)?.name || '?'} 先付 · ${e.date}</div></div>
+      <div class="grow"><div class="title">${esc(e.desc || e.cat || '神秘支出')}</div>
+        <div class="detail">${esc(memberById(e.payer)?.name || '?')} 先付 · ${e.date}</div></div>
       <div class="amount">${fmt(e.amount)}</div>
       <button class="del-btn" style="color:var(--warning);font-size:14px;font-weight:700" onclick="app.revealRandom(${e.id})">開獎</button>
     </div>`;
@@ -432,8 +432,8 @@ function autoAddSelfAsMember() {
 }
 // 成員頭貼：有照片用照片，沒有用色塊字首
 function memberAvatar(m, cls = '') {
-  if (m && m.avatar) return `<img class="avatar-img ${cls}" src="${m.avatar}" alt="">`;
-  return `<div class="avatar ${cls}" style="background:${colorOf(m ? m.id : 0)}">${initials((m && m.name) || '?')}</div>`;
+  if (m && m.avatar) return `<img class="avatar-img ${cls}" src="${esc(m.avatar)}" alt="">`;
+  return `<div class="avatar ${cls}" style="background:${colorOf(m ? m.id : 0)}">${esc(initials((m && m.name) || '?'))}</div>`;
 }
 function chatHTML() {
   const chats = proj().chats || [];
@@ -668,7 +668,7 @@ function openSheet(forceFull = false) {
   <div class="field"><label>分類</label><div class="chips" id="catChips">${catChipsHTML('out')}</div></div>
   <div class="field"><label>詳細說明（選填）</label><input id="inDesc" placeholder="例如：鐵板燒"></div>
   <div class="field"><label>日期</label><input id="inDate" type="date" value="${todayISO()}"></div>
-  <div class="field"><label>誰先付的？</label><select id="inPayer">${proj().members.map(m => `<option value="${m.id}">${m.name}</option>`).join('')}</select></div>
+  <div class="field"><label>誰先付的？</label><select id="inPayer">${proj().members.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('')}</select></div>
   <div class="field"><label>金額 (NT$)＝對方欠的錢</label>${keypadHTML()}</div>
   <button class="btn" id="submitBtn" onclick="app.addExpense()">記一筆</button>`;
     document.getElementById('mask').classList.add('open');
@@ -700,7 +700,7 @@ function openSheet(forceFull = false) {
       <div class="chip on green" data-k="in" onclick="app.selectKind(this)">${isFund ? '存入' : '收入'}</div>
       <div class="chip" data-k="out" onclick="app.selectKind(this)">支出</div>
     </div></div>
-  ${isFund ? `<div class="field" id="payerField"><label>誰存入？</label><select id="inPayer">${proj().members.map(m => `<option value="${m.id}">${m.name}</option>`).join('')}</select></div>` : ''}
+  ${isFund ? `<div class="field" id="payerField"><label>誰存入？</label><select id="inPayer">${proj().members.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('')}</select></div>` : ''}
   <div class="field"><label>分類</label><div class="chips" id="catChips">${catChipsHTML('in')}</div></div>
   <div class="field"><label>詳細說明（選填）</label><input id="inDesc" placeholder="例如：鐵板燒、七月月費"></div>
   <div class="field"><label>日期</label><input id="inDate" type="date" value="${todayISO()}"></div>
@@ -771,7 +771,7 @@ function exactFormHTML() {
   cellStr = {}; activeKey = null;
   const rows = proj().members.map(m => `
 <div class="row exact-row">
-  <div class="grow" style="font-weight:600">${m.name}</div>
+  <div class="grow" style="font-weight:600">${esc(m.name)}</div>
   <input class="amt-cell" type="text" inputmode="decimal" placeholder="0" id="cell_pay_${m.id}" oninput="app.updateExactSum()">
   <input class="amt-cell" type="text" inputmode="decimal" placeholder="0" id="cell_spend_${m.id}" oninput="app.updateExactSum()">
 </div>`).join('');
@@ -786,7 +786,7 @@ function exactFormHTML() {
   <div class="exact-sum" id="exactSum">先付合計 NT$ 0｜支出合計 NT$ 0</div>
 </div>
 <div class="field"><label>或：選擇誰要均分支出，一鍵填入</label>
-  <div class="chips" id="eqChips">${proj().members.map(m => `<div class="chip on" data-id="${m.id}" onclick="this.classList.toggle('on')">${m.name}</div>`).join('')}</div>
+  <div class="chips" id="eqChips">${proj().members.map(m => `<div class="chip on" data-id="${m.id}" onclick="this.classList.toggle('on')">${esc(m.name)}</div>`).join('')}</div>
   <div style="height:8px"></div>
   <button class="btn gray" onclick="app.fillEqualSpend()">⚖️ 把先付合計均分到支出</button>
 </div>
@@ -813,18 +813,18 @@ function equalFormHTML() {
   cellStr = {}; activeKey = null;
   return `
 <div class="field"><label>金額 (NT$)</label>${keypadHTML()}</div>
-<div class="field"><label>誰先付的？</label><select id="inPayer">${proj().members.map(m => `<option value="${m.id}">${m.name}</option>`).join('')}</select></div>
+<div class="field"><label>誰先付的？</label><select id="inPayer">${proj().members.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('')}</select></div>
 <div class="field"><label>誰要分攤？（均分）</label>
-  <div class="chips" id="chips">${proj().members.map(m => `<div class="chip on" data-id="${m.id}" onclick="this.classList.toggle('on')">${m.name}</div>`).join('')}</div>
+  <div class="chips" id="chips">${proj().members.map(m => `<div class="chip on" data-id="${m.id}" onclick="this.classList.toggle('on')">${esc(m.name)}</div>`).join('')}</div>
 </div>`;
 }
 function randomFormHTML() {
   cellStr = {}; activeKey = null;
   return `
 <div class="field"><label>金額 (NT$)</label>${keypadHTML()}</div>
-<div class="field"><label>誰先付的？</label><select id="inPayer">${proj().members.map(m => `<option value="${m.id}">${m.name}</option>`).join('')}</select></div>
+<div class="field"><label>誰先付的？</label><select id="inPayer">${proj().members.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('')}</select></div>
 <div class="field"><label>誰參加抽籤？（抽中的人買單）</label>
-  <div class="chips" id="candChips">${proj().members.map(m => `<div class="chip on" data-id="${m.id}" onclick="this.classList.toggle('on')">${m.name}</div>`).join('')}</div>
+  <div class="chips" id="candChips">${proj().members.map(m => `<div class="chip on" data-id="${m.id}" onclick="this.classList.toggle('on')">${esc(m.name)}</div>`).join('')}</div>
 </div>
 <div class="field"><label>抽幾個人一起買單？（均攤）</label>
   <select id="inDrawN">${proj().members.slice(0, Math.max(1, proj().members.length - 1)).map((_, i) => `<option value="${i + 1}">${i + 1} 人</option>`).join('')}</select>
@@ -982,7 +982,7 @@ function addExpense() {
     const amt = Math.round(evalAmt(amtVal()));
     const payer = +document.getElementById('inPayer').value;
     const other = proj().members.find(m => m.id !== payer);
-    if (!amt || amt <= 0) { toast('請輸入有效金額'); return; }
+    if (!isValidAmount(amt)) { toast('請輸入有效金額'); return; }
     if (!other) { toast('找不到對方成員'); return; }
     commitRecord({
       cat, desc, amount: amt, mode: 'exact', duo: true,
@@ -1011,7 +1011,7 @@ function addExpense() {
     const amt = Math.round(evalAmt(amtVal()));
     if (editingRec) {
       // 編輯隨機付款：不重抽，只更新金額/分類/說明/日期
-      if (!amt || amt <= 0) { toast('請輸入有效金額'); return; }
+      if (!isValidAmount(amt)) { toast('請輸入有效金額'); return; }
       commitRecord({ cat, desc, amount: amt, date: dateFromInput() });
       return;
     }
@@ -1019,7 +1019,7 @@ function addExpense() {
     const cands = [...document.querySelectorAll('#candChips .chip.on')].map(c => +c.dataset.id);
     const drawN = +(document.getElementById('inDrawN')?.value || 1);
     const revealNow = document.querySelector('#revealChips .chip.on')?.dataset.r !== 'later';
-    if (!amt || amt <= 0) { toast('請輸入有效金額'); return; }
+    if (!isValidAmount(amt)) { toast('請輸入有效金額'); return; }
     if (cands.length < 2) { toast('至少選 2 位參加抽籤'); return; }
     if (drawN >= cands.length) { toast('抽的人數要少於參加人數'); return; }
     // Fisher–Yates 洗牌後取前 N 個（用密碼學等級亂數，避免任何可預測性）
@@ -1039,7 +1039,7 @@ function addExpense() {
     const payer = +document.getElementById('inPayer').value;
     let splitters = [...document.querySelectorAll('#chips .chip.on')].map(c => +c.dataset.id);
     if (!splitters.length && isDuoMode()) splitters = proj().members.map(m => m.id); // 👥 雙人模式自動均分
-    if (!amt || amt <= 0) { toast('請輸入有效金額'); return; }
+    if (!isValidAmount(amt)) { toast('請輸入有效金額'); return; }
     if (!splitters.length) { toast('至少選一位分攤者'); return; }
     commitRecord({ cat, desc, amount: amt, payer, splitters, date: dateFromInput() });
   }
@@ -1050,7 +1050,7 @@ function addLedgerRecord() {
   const cat = document.querySelector('#catChips .chip.on')?.dataset.c || '📦 其他';
   const desc = document.getElementById('inDesc').value.trim();
   const amt = Math.round(evalAmt(amtVal()));
-  if (!amt || amt <= 0) { toast('請輸入有效金額'); return; }
+  if (!isValidAmount(amt)) { toast('請輸入有效金額'); return; }
   const payer = (isFund && kind === 'in') ? +document.getElementById('inPayer').value : 0;
   commitRecord({ cat, desc, amount: amt, kind, payer, splitters: [], date: dateFromInput() });
 }
@@ -1066,9 +1066,9 @@ function openProjectSheet() {
     const cur = p.id === data.currentProjectId;
     const ti = TYPE_INFO[p.type] || TYPE_INFO.split;
     html += `<div class="row proj-row ${cur ? 'current' : ''}" onclick="app.switchProject(${p.id})" style="cursor:pointer">
-  <div class="avatar" style="background:${colorOf(p.id)}">${initials(p.name)}</div>
+  <div class="avatar" style="background:${colorOf(p.id)}">${esc(initials(p.name))}</div>
   <div class="grow">
-    <div class="title">${p.name}<span class="type-tag ${ti.tag}">${ti.name}</span></div>
+    <div class="title">${esc(p.name)}<span class="type-tag ${ti.tag}">${ti.name}</span></div>
     <div class="detail">${p.type === 'personal' ? '' : p.members.length + ' 位成員 · '}${p.expenses.length} 筆紀錄${p.cloud ? ' · ☁ ' + p.cloud.code : ''}</div>
   </div>
   ${cur ? '<span class="badge">目前</span>' : ''}
@@ -1210,7 +1210,7 @@ async function openAdminUsersSheet() {
     const founder = (u.email || '').toLowerCase() === ADMIN_EMAILS[0];
     const day = String(u.created_at || '').slice(0, 10);
     html += `<div class="row">
-      <div class="avatar" style="background:${me ? 'var(--primary)' : 'var(--text-secondary)'}">${initials(u.nickname || '?')}</div>
+      <div class="avatar" style="background:${me ? 'var(--primary)' : 'var(--text-secondary)'}">${esc(initials(u.nickname || '?'))}</div>
       <div class="grow">
         <div class="title">${esc(u.nickname)}${u.is_admin ? '<span class="badge admin">admin</span>' : ''}${me ? '<span class="badge" style="margin-left:6px">我</span>' : ''}</div>
         <div class="detail">${esc(u.email)} · ${u.projects} 個專案 · 註冊 ${esc(day)}</div>
@@ -1281,7 +1281,7 @@ async function openAdminSheet() {
     const ti = TYPE_INFO[d.type] || TYPE_INFO.split;
     const t = String(r.updated_at || '').replace('T', ' ').slice(5, 16);
     html += `<div class="row" style="cursor:pointer" onclick="app.joinProject('${esc(r.code)}')">
-      <div class="avatar" style="background:var(--primary-2)">${initials(r.name || '?')}</div>
+      <div class="avatar" style="background:var(--primary-2)">${esc(initials(r.name || '?'))}</div>
       <div class="grow">
         <div class="title">${esc(r.name)}<span class="type-tag ${ti.tag}">${ti.name}</span></div>
         <div class="detail">☁ ${esc(r.code)} · ${(d.members || []).length} 位成員 · ${(d.expenses || []).length} 筆 · 更新 ${esc(t)}</div>
@@ -1298,8 +1298,8 @@ function openAuthSheet() {
   if (authUser) {
     document.getElementById('sheetTitle').textContent = '我的帳號';
     const ava = authUser.avatar
-      ? `<img class="avatar-img" src="${authUser.avatar}" alt="">`
-      : `<div class="avatar" style="background:var(--primary)">${initials(authUser.nickname)}</div>`;
+      ? `<img class="avatar-img" src="${esc(authUser.avatar)}" alt="">`
+      : `<div class="avatar" style="background:var(--primary)">${esc(initials(authUser.nickname))}</div>`;
     body.innerHTML = `
       <div class="card"><div class="row">
         ${ava}
@@ -1393,7 +1393,7 @@ function clearMemberAvatar() {
   pendingMemberAvatar = 'REMOVE';
   const m = proj().members.find(x => x.id === editingMemberId);
   const pv = document.getElementById('mAvatarPreview');
-  if (pv && m) pv.innerHTML = `<div class="avatar big" style="background:${colorOf(m.id)}">${initials(m.name)}</div>`;
+  if (pv && m) pv.innerHTML = `<div class="avatar big" style="background:${colorOf(m.id)}">${esc(initials(m.name))}</div>`;
 }
 function saveMemberEdit() {
   const m = proj().members.find(x => x.id === editingMemberId);
@@ -1414,8 +1414,8 @@ function openProfileSheet() {
   pendingAvatar = null;
   document.getElementById('sheetTitle').textContent = '✎ 編輯個人資料';
   const cur = authUser.avatar
-    ? `<img class="avatar-img big" src="${authUser.avatar}" alt="">`
-    : `<div class="avatar big" style="background:var(--primary)">${initials(authUser.nickname)}</div>`;
+    ? `<img class="avatar-img big" src="${esc(authUser.avatar)}" alt="">`
+    : `<div class="avatar big" style="background:var(--primary)">${esc(initials(authUser.nickname))}</div>`;
   document.getElementById('sheetBody').innerHTML = `
     <div class="field" style="text-align:center">
       <div id="avatarPreview" style="display:flex;justify-content:center;margin-bottom:10px">${cur}</div>

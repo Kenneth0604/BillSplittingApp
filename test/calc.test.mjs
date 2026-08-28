@@ -23,6 +23,11 @@ t('evalAmt 67+67', calc.evalAmt('67+67') === 134);
 t('evalAmt 670/3', Math.round(calc.evalAmt('670/3')) === 223);
 t('evalAmt 結尾運算子', calc.evalAmt('50*') === 50);
 t('evalAmt 惡意輸入', isNaN(calc.evalAmt('alert(1)')));
+t('evalAmt 除以零應被擋下 (Infinity)', isNaN(calc.evalAmt('670/0')));
+t('isValidAmount 擋下 Infinity', calc.isValidAmount(Infinity) === false);
+t('isValidAmount 擋下 NaN', calc.isValidAmount(NaN) === false);
+t('isValidAmount 擋下 0/負數', calc.isValidAmount(0) === false && calc.isValidAmount(-5) === false);
+t('isValidAmount 接受正常金額', calc.isValidAmount(100) === true);
 t('editAmt 運算子替換', calc.editAmt('5+', '*') === '5*');
 t('editAmt 小數點限本段', calc.editAmt('1.5+2', '.') === '1.5+2.');
 
@@ -33,6 +38,10 @@ t('esc 跳脫', calc.esc('<b>&"') === '&lt;b&gt;&amp;&quot;');
 // losersOf 相容
 t('losersOf 舊資料', JSON.stringify(calc.losersOf({ loser: 2 })) === '[2]');
 t('losersOf 新資料', JSON.stringify(calc.losersOf({ losers: [1, 3] })) === '[1,3]');
+t('losersOf 空陣列不應誤判為有效名單', JSON.stringify(calc.losersOf({ losers: [] })) === '[]');
+t('losersOf 空陣列＋舊 loser 應 fallback', JSON.stringify(calc.losersOf({ losers: [], loser: 5 })) === '[5]');
+// colorOf 負數防禦
+t('colorOf 對負數不回傳 undefined', calc.colorOf(-1) !== undefined);
 // 日期
 t('dateToISO', /^\d{4}-07-05$/.test(calc.dateToISO('7/5')));
 

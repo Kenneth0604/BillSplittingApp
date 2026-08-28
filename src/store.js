@@ -59,32 +59,58 @@ function defaultData() {
   };
 }
 export let data;
+// 檢查資料結構是否為合法的 store 資料（至少要有 members/expenses 陣列），
+// 用來擋下 localStorage 內容損毀或欄位缺失時整頁白屏崩潰的風險
+function isValidStoreData(d) {
+  if (!d || !Array.isArray(d.projects) || !d.projects.length) return false;
+  return d.projects.every(p => p && typeof p === 'object' && Array.isArray(p.members) && Array.isArray(p.expenses));
+}
 function load() {
+  let raw = null;
+  let corrupted = false;
+  try { raw = localStorage.getItem('splitapp'); } catch (e) { raw = null; }
   let d = null;
-  try { d = JSON.parse(localStorage.getItem('splitapp') || 'null'); } catch (e) { }
+  if (raw != null) {
+    try { d = JSON.parse(raw); } catch (e) { corrupted = true; d = null; }
+  }
   if (d && d.members) {
     // 舊版單一帳本 → 搬移成專案
-    d = {
-      projects: [{
-        id: 1, name: '我的帳本', type: 'split', members: d.members, expenses: d.expenses,
-        nextMemberId: d.nextMemberId, nextExpenseId: d.nextExpenseId
-      }],
-      currentProjectId: 1, nextProjectId: 2,
-    };
+    if (!Array.isArray(d.members) || !Array.isArray(d.expenses)) {
+      corrupted = true; d = null;
+    } else {
+      d = {
+        projects: [{
+          id: 1, name: '我的帳本', type: 'split', members: d.members, expenses: d.expenses,
+          nextMemberId: d.nextMemberId, nextExpenseId: d.nextExpenseId
+        }],
+        currentProjectId: 1, nextProjectId: 2,
+      };
+    }
   }
-  data = (d && d.projects && d.projects.length) ? d : defaultData();
+  if (raw != null && d && !isValidStoreData(d)) { corrupted = true; d = null; }
+  data = (d && isValidStoreData(d)) ? d : defaultData();
   data.projects.forEach(p => {
     if (!p.type) p.type = 'split';
     if (!p.cats) p.cats = { out: [...CATS.out], in: [...CATS.in] };
     if (!p.chats) p.chats = [];
   });
+  if (!data.projects.length) data = defaultData(); // 理論上不會發生（isValidStoreData 已擋），僅作最後防線
   if (!data.projects.some(p => p.id === data.currentProjectId)) data.currentProjectId = data.projects[0].id;
+  return corrupted; // true = 偵測到損毀資料並已重置為預設資料，呼叫端可提示使用者
 }
 let onSave = null;
+let onSaveError = null;
 export function setOnSave(fn) { onSave = fn; }
+export function setOnSaveError(fn) { onSaveError = fn; }
 function save() {
-  try { localStorage.setItem('splitapp', JSON.stringify(data)); } catch (e) { }
+  try {
+    localStorage.setItem('splitapp', JSON.stringify(data));
+  } catch (e) {
+    if (onSaveError) onSaveError(e);
+    return false; // 儲存失敗（配額已滿／隱私模式等），呼叫端可提示使用者
+  }
   if (onSave) onSave(); // 有設定雲端時，自動同步上雲（由 main.js 接上）
+  return true;
 }
 function proj() { return data.projects.find(p => p.id === data.currentProjectId); }
 

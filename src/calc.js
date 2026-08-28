@@ -3,7 +3,7 @@ import { proj, COLORS } from './store.js?v=21';
 
 const fmt = n => 'NT$ ' + Math.round(n).toLocaleString('zh-Hant'); // 金額一律取整數顯示
 const memberById = id => proj().members.find(m => m.id === id);
-const colorOf = id => COLORS[id % COLORS.length];
+const colorOf = id => COLORS[((id % COLORS.length) + COLORS.length) % COLORS.length];
 const initials = name => name.trim().slice(0, 1).toUpperCase();
 const today = () => { const d = new Date(); return `${d.getMonth() + 1}/${d.getDate()}`; };
 const todayISO = () => {
@@ -18,8 +18,9 @@ function balances() {
   proj().expenses.forEach(e => {
     if (e.mode === 'random') {
       if (!e.revealed) return; // 未開獎不列入，避免被反推出結果
-      if (bal[e.payer] !== undefined) bal[e.payer] += e.amount;
       const ls = losersOf(e);
+      if (!ls.length) return; // 無中獎者資訊的異常資料：整筆跳過，避免付款人收全額卻無人被扣款
+      if (bal[e.payer] !== undefined) bal[e.payer] += e.amount;
       ls.forEach(id => { if (bal[id] !== undefined) bal[id] -= e.amount / ls.length; });
     } else if (e.mode === 'exact') {
       // 特定付款：逐人記先付與支出
@@ -143,22 +144,30 @@ const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(
 function dateToISO(md) {
   const p = String(md || '').split('/');
   if (p.length !== 2) return todayISO();
+  const mo = +p[0], da = +p[1];
+  if (!Number.isFinite(mo) || !Number.isFinite(da)) return todayISO();
   const y = new Date().getFullYear();
-  return `${y}-${String(+p[0]).padStart(2, '0')}-${String(+p[1]).padStart(2, '0')}`;
+  return `${y}-${String(mo).padStart(2, '0')}-${String(da).padStart(2, '0')}`;
 }
 
 const OP_LABEL = { '/': '÷', '*': '×', '-': '−', '+': '＋' };
 
 // 運算式顯示（ASCII 運算子換成好看的符號）
 const dispExpr = s => s.replace(/\//g, '÷').replace(/\*/g, '×').replace(/-/g, '−').replace(/\+/g, '＋');
-// 安全計算運算式（只允許數字與 + - * / .），失敗回 NaN
+// 安全計算運算式（只允許數字與 + - * / .），失敗或非有限值（如除以零產生 Infinity）回 NaN
 function evalAmt(s) {
   if (!s) return NaN;
   let x = String(s);
   while (x && '+-*/.'.includes(x[x.length - 1])) x = x.slice(0, -1); // 去掉結尾未完成的運算子
   if (!x || !/^[\d+\-*/.]+$/.test(x)) return NaN;
-  try { return Function('"use strict";return (' + x + ')')(); } catch (e) { return NaN; }
+  try {
+    const r = Function('"use strict";return (' + x + ')')();
+    return Number.isFinite(r) ? r : NaN; // 擋下 Infinity/-Infinity（例如 1/0）與 NaN
+  } catch (e) { return NaN; }
 }
+
+// 統一的金額有效性檢查：非零、非負、且為有限數（擋下 NaN/Infinity）
+const isValidAmount = amt => Number.isFinite(amt) && amt > 0;
 
 function editAmt(s, k) {
   if (k === '⌫') return s.slice(0, -1);
@@ -178,11 +187,14 @@ function editAmt(s, k) {
   return s.length < 18 ? s + k : s;
 }
 
-const losersOf = e => e.losers || (e.loser != null ? [e.loser] : []);
+// losers 為空陣列時視為「無中獎者資訊」，不可直接回傳空陣列（否則會造成
+// 付款人收全額但無人被扣款的資金不平衡），需 fallback 到舊格式 loser 或回傳空陣列
+// 且呼叫端（如 balances()）已對空陣列做防禦，但這裡先修正語意本身。
+const losersOf = e => (e.losers && e.losers.length ? e.losers : (e.loser != null ? [e.loser] : []));
 
 export {
   fmt, memberById, colorOf, initials, today, todayISO, esc, dateToISO,
   balances, settlements, ledgerStats,
   expenseBreakdown, toItems, memberPaidBreakdown, memberShareBreakdown, depositBreakdown,
-  OP_LABEL, dispExpr, evalAmt, editAmt, losersOf,
+  OP_LABEL, dispExpr, evalAmt, editAmt, losersOf, isValidAmount,
 };

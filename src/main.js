@@ -4,10 +4,11 @@ import * as cloud from './cloud.js?v=21';
 import * as ui from './ui.js?v=21';
 
 // 1) 載入本機資料
-store.load();
+const dataWasCorrupted = store.load();
 
 // 2) 相依接線（store 存檔 → 雲端推送；雲端事件 → UI 提示/重繪）
 store.setOnSave(cloud.schedulePush);
+store.setOnSaveError(() => ui.toast('⚠ 儲存失敗，請檢查瀏覽器空間或隱私模式設定'));
 cloud.hooks.toast = ui.toast;
 cloud.hooks.render = ui.render;
 
@@ -76,6 +77,7 @@ window.app = {
 // 4) 首次渲染
 ui.render();
 ui.initSheetGestures(); // 表單下滑關閉
+if (dataWasCorrupted) ui.toast('⚠ 偵測到本機資料損毀，已重置為預設資料');
 
 // 5) 雲端同步與登入
 if (cloud.cloudOn()) {
