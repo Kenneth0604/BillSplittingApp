@@ -1,17 +1,17 @@
 // UI 層：渲染、表單、事件處理（依賴 store / calc / cloud）
 import {
   data, proj, save, getCats, projKey, CATS, TYPE_INFO, CAT_COLORS,
-} from './store.js?v=22';
+} from './store.js?v=23';
 import {
   fmt, memberById, colorOf, initials, today, todayISO, esc, dateToISO,
   balances, settlements, ledgerStats,
   expenseBreakdown, toItems, memberPaidBreakdown, memberShareBreakdown, depositBreakdown,
   OP_LABEL, dispExpr, evalAmt, editAmt, losersOf, isValidAmount,
-} from './calc.js?v=22';
+} from './calc.js?v=23';
 import {
   sb, cloudOn, authUser, isAdmin, setAuthUser, pullAll, syncMyProjects,
   genCode, projPayload, ADMIN_EMAILS, refreshAdminFlag,
-} from './cloud.js?v=22';
+} from './cloud.js?v=23';
 
 let currentPage = 'expenses';
 

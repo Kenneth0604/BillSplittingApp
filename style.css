@@ -51,35 +51,6 @@ body {
   --shadow-glow: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --primary: #0A84FF;
-    --primary-2: #0A84FF;
-    --primary-deep: #409CFF;
-    --primary-soft: rgba(10, 132, 255, .18);
-    --success: #30D158;
-    --success-soft: rgba(48, 209, 88, .18);
-    --danger: #FF453A;
-    --danger-soft: rgba(255, 69, 58, .18);
-    --warning: #FF9F0A;
-    --warning-soft: rgba(255, 159, 10, .18);
-    --purple: #BF5AF2;
-    --purple-soft: rgba(191, 90, 242, .18);
-    --teal: #40C8E0;
-    --bg: #000000;
-    /* systemGroupedBackground (dark) */
-    --surface: #1C1C1E;
-    /* secondarySystemGroupedBackground (dark) */
-    --surface-alt: #2C2C2E;
-    /* systemGray5 (dark) */
-    --text: #FFFFFF;
-    --text-secondary: rgba(235, 235, 245, .6);
-    --text-tertiary: rgba(235, 235, 245, .3);
-    --hairline: rgba(84, 84, 88, .65);
-    --shadow-card: 0 1px 3px rgba(0, 0, 0, .5);
-  }
-}
-
 body {
   font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Helvetica Neue", sans-serif;
   -webkit-font-smoothing: antialiased;
