@@ -148,6 +148,12 @@ body {
   padding: 0;
 }
 
+.icon-pill svg {
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
+}
+
 .project-pill:active {
   opacity: .7;
   transform: scale(.96);
