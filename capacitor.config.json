@@ -3,6 +3,10 @@
   "appName": "算錢用ㄉ東西",
   "webDir": "www",
   "backgroundColor": "#F2F2F7",
+  "server": {
+    "url": "https://kenneth0604.github.io/BillSplittingApp/",
+    "androidScheme": "https"
+  },
   "ios": {
     "contentInset": "always"
   },
