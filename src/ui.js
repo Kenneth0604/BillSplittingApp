@@ -1,17 +1,17 @@
 // UI 層：渲染、表單、事件處理（依賴 store / calc / cloud）
 import {
   data, proj, save, getCats, projKey, CATS, TYPE_INFO, CAT_COLORS,
-} from './store.js?v=24';
+} from './store.js?v=25';
 import {
   fmt, memberById, colorOf, initials, today, todayISO, esc, dateToISO,
   balances, settlements, ledgerStats,
   expenseBreakdown, toItems, memberPaidBreakdown, memberShareBreakdown, depositBreakdown,
   OP_LABEL, dispExpr, evalAmt, editAmt, losersOf, isValidAmount,
-} from './calc.js?v=24';
+} from './calc.js?v=25';
 import {
   sb, cloudOn, authUser, isAdmin, setAuthUser, pullAll, syncMyProjects,
   genCode, projPayload, ADMIN_EMAILS, refreshAdminFlag,
-} from './cloud.js?v=24';
+} from './cloud.js?v=25';
 
 let currentPage = 'expenses';
 
@@ -732,7 +732,7 @@ export function randInt(n) {
 function keypadHTML(withDisplay = true) {
   amtStr = ''; activeKey = null;
   if (!withDisplay) return '';
-  return `<input class="amt-input" id="amtInput" type="text" inputmode="decimal" placeholder="0" autocomplete="off" onkeydown="if(event.key==='Enter')event.target.blur()">`;
+  return `<input class="amt-input" id="amtInput" type="text" inputmode="decimal" placeholder="0" autocomplete="off" onkeydown="if(event.key==='Enter')event.target.blur()" onfocus="this.setSelectionRange(this.value.length,this.value.length)">`;
 }
 // 讀取金額欄（相容測試直接操作 amtStr 的路徑）
 function amtVal() {
@@ -772,8 +772,8 @@ function exactFormHTML() {
   const rows = proj().members.map(m => `
 <div class="row exact-row">
   <div class="grow" style="font-weight:600">${esc(m.name)}</div>
-  <input class="amt-cell" type="text" inputmode="decimal" placeholder="0" id="cell_pay_${m.id}" oninput="app.updateExactSum()">
-  <input class="amt-cell" type="text" inputmode="decimal" placeholder="0" id="cell_spend_${m.id}" oninput="app.updateExactSum()">
+  <input class="amt-cell" type="text" inputmode="decimal" placeholder="0" id="cell_pay_${m.id}" oninput="app.updateExactSum()" onfocus="this.setSelectionRange(this.value.length,this.value.length)">
+  <input class="amt-cell" type="text" inputmode="decimal" placeholder="0" id="cell_spend_${m.id}" oninput="app.updateExactSum()" onfocus="this.setSelectionRange(this.value.length,this.value.length)">
 </div>`).join('');
   return `
 <div class="field"><label>輸入各自的先付與支出</label>
