@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 
+# Capacitor：由 tools/build-web.mjs 產生，不需要進版控
+www/
+
 # AI tool generated directories
 .afsmycoder/
 .kilo/

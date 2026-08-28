@@ -22,6 +22,8 @@ index.html（外殼）─ style.css（樣式）
 
 重點觀念：**所有邏輯都在前端**，程式碼以原生 ES Modules 拆分（無 bundler）。相依方向固定為 store → calc → cloud → ui → main，雲端層對 UI 的呼叫透過 `hooks`（main.js 接線）避免循環相依；HTML 樣板的內聯事件經由 `window.app` 橋呼叫模組函式。
 
+這套網頁本體同時也是手機 App 的內容——透過 Capacitor 包了一層原生殼（`android/`／`ios/`），開啟後直接顯示這個正式網站，兩邊共用同一份程式碼，不需要另外維護。細節見第六章。
+
 **開發注意**：ES Modules 受 CORS 限制，**不能直接雙擊 index.html 開啟（file:// 會失敗）**。本機開發請在專案資料夾跑 `python -m http.server 8000` 後開 `http://localhost:8000`；部署到 GitHub Pages 則不受影響。改版時記得把 index.html 內 `main.js?v=N` 的版本號 +1，強制使用者拿到新程式。
 
 ## 二、運作原理
@@ -376,6 +378,95 @@ end $$;
 2. 登入 A 帳號、開瀏覽器 Console 執行 `await sb.from('shared_projects').select('*')` → 只回傳 A 是成員的專案。
 3. 用非管理員帳號同樣查詢 → 看不到別人的專案；用管理員帳號 → 看得到全部。
 
+## 六、行動裝置 App（Capacitor WebView 包裝）
+
+專案除了原本的網頁本體，還多了一層「原生殼」，讓手機可以像裝一般 App 一樣安裝，**不透過 App Store／Google Play**。
+
+### 6.1 多了哪些檔案、程式碼放在哪
+
+```
+package.json ／ package-lock.json    npm 套件清單（@capacitor/core、ios、android、cli）
+capacitor.config.json                App 設定：appId、appName、要載入的網址
+tools/build-web.mjs                  把 index.html／style.css／src 複製到 www/（打包用，日常開發不用管）
+www/                                 build-web.mjs 產生的暫存輸出（.gitignore 排除，不進版控）
+android/                             Android 原生專案（用 Android Studio 開）
+ios/                                 iOS 原生專案（用 Xcode 開，僅能在 macOS 上編譯）
+```
+
+**app 本身沒有另外一份程式邏輯**：`index.html`／`style.css`／`src/` 仍然是唯一的程式碼來源，
+跟網頁版共用同一套。`android/`、`ios/` 只是「殼」，負責顯示一個全螢幕、有 App 圖示、可離線安裝的視窗。
+
+### 6.2 運作方式：App 直接連正式網站，不是把網頁包死在裡面
+
+`capacitor.config.json` 設定 App 開啟後直接載入現有的正式網址：
+
+```json
+"server": { "url": "https://kenneth0604.github.io/BillSplittingApp/" }
+```
+
+也就是說 App **不是**把 `index.html` 這些檔案封裝進安裝檔離線執行，而是像一個「裝了殼、拿掉網址列的瀏覽器」，
+永遠顯示 GitHub Pages 上最新的版本。
+
+### 6.3 如何更新
+
+**跟現在完全一樣，不需要多做任何事**：改程式 → `node tools/bump.mjs` → commit → push，
+GitHub Pages 部署完成後，手機上的 App 重新開啟／回到前景就是新版本，**不必重新 build、不必重新安裝 App**。
+
+只有下列情況才需要回頭重新 build 原生殼、重新安裝：
+- 要改 App 名稱、圖示、Bundle ID／Package name（改 `capacitor.config.json` 之後）
+- 要加裝原生功能（相機、推播通知等 Capacitor 外掛）
+- 之後真的要送審上架 App Store／Google Play
+
+（若之後想要「完全離線也能開」的版本，把 `capacitor.config.json` 的 `server` 區塊刪掉、
+只留 `webDir: "www"`，執行 `npm run cap:sync` 重新打包即可；代價是屆時每次改版都要重新 build＋重裝，
+不像現在這樣自動更新。）
+
+### 6.4 如何安裝：Android（免上架，直接裝 apk）
+
+需要一台裝了 **Android Studio**（含 Android SDK）的電腦：
+
+```bash
+npm install                  # 第一次先裝相依套件
+npm run cap:open:android     # 用 Android Studio 開啟 android/ 專案
+```
+
+在 Android Studio 裡：
+1. 選單 **Build → Build Bundle(s) / APK(s) → Build APK(s)**
+2. build 完成後點通知裡的「locate」，或到 `android/app/build/outputs/apk/debug/app-debug.apk` 找檔案
+3. 把這個 `.apk` 傳到手機（雲端硬碟、Line、USB 都可以），在手機上點開安裝
+   （第一次會被系統擋下，去「設定」允許此來源安裝未知 App 即可，之後就跟一般 App 一樣）
+
+之後**不需要重新安裝**，開啟 App 就是最新內容（見 6.3）；只有換圖示/名稱這種殼本身的改動才要重新 build＋重裝一次。
+
+### 6.5 如何安裝：iOS（免上架，裝到自己的 iPhone）
+
+需要一台 **Mac**（跑 Windows 沒辦法完成這步，是蘋果官方限制，`ios/` 專案結構已經生成好放在這個 repo 裡了）：
+
+```bash
+npm install
+npm run cap:open:ios         # 用 Xcode 開啟 ios/App/App.xcworkspace（需先跑過 pod install）
+```
+
+在 Xcode 裡：
+1. 用傳輸線接上 iPhone，左上角選你的裝置
+2. Signing & Capabilities 登入自己的 Apple ID（免費帳號即可）
+3. 按 ▶ Run，App 就會裝到手機上
+
+**限制**：免費 Apple ID 簽的 App，裝置上 **7 天後會過期**（圖示變灰、打不開），
+回 Xcode 對同一台裝置重新按一次 Run 就會重新啟用，不用改任何程式碼；
+不想每 7 天重裝一次的話，需要付費 Apple Developer Program（US$99/年）簽章可撐一整年。
+內容更新一樣不受影響（見 6.3），只有這個簽章過期要重複處理。
+
+### 6.6 常用指令備忘
+
+| 指令 | 用途 |
+|---|---|
+| `npm install` | 安裝 Capacitor 相關套件（第一次或 clone 下來後執行） |
+| `npm run cap:sync` | 把最新網頁檔案＋設定同步進 `android/`、`ios/`（改了 `capacitor.config.json` 才需要跑，日常內容更新不需要） |
+| `npm run cap:open:android` | 用 Android Studio 開啟 Android 專案 |
+| `npm run cap:open:ios` | 用 Xcode 開啟 iOS 專案（僅限 macOS） |
+| `npm test` | 跑單元＋整合測試（等同 `node test/calc.test.mjs && node test/integration.mjs`） |
+
 ---
 
-*本專案由 Claude 協助開發。檔案：`index.html`＋`style.css`＋`src/`（App 本體，ES Modules）、`test/`（單元與整合測試）、`README.md`（本文件）。*
+*本專案由 Claude 協助開發。檔案：`index.html`＋`style.css`＋`src/`（App 本體，ES Modules，網頁版與行動裝置 App 共用）、`test/`（單元與整合測試）、`android/`／`ios/`／`capacitor.config.json`（Capacitor 行動裝置殼，見第六章）、`README.md`（本文件）。*

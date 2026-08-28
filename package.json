@@ -1,0 +1,24 @@
+{
+  "name": "billsplittingapp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "算錢用ㄉ東西：多人分帳／共同基金／個人記帳網頁 App，透過 Capacitor 包裝成 iOS/Android WebView App",
+  "scripts": {
+    "build:web": "node tools/build-web.mjs",
+    "cap:sync": "npm run build:web && npx cap sync",
+    "cap:sync:ios": "npm run build:web && npx cap sync ios",
+    "cap:sync:android": "npm run build:web && npx cap sync android",
+    "cap:open:ios": "npx cap open ios",
+    "cap:open:android": "npx cap open android",
+    "test": "node test/calc.test.mjs && node test/integration.mjs"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.2.0",
+    "@capacitor/core": "^6.2.0",
+    "@capacitor/ios": "^6.2.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.2.0"
+  }
+}
