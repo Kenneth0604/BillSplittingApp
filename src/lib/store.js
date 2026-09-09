@@ -16,39 +16,16 @@ const CAT_COLORS = ['#d99a1b', '#0f9d63', '#6d4aff', '#e5477a', '#a855f7', '#0d9
 const STORAGE_KEY = 'splitapp'
 
 /* ---------- 資料儲存(localStorage,多專案) ---------- */
+/** 第一次開啟時的起始資料:一個空白的多人分帳專案(沒有示範帳目) */
 function defaultData() {
-  const demoLoser = [1, 2, 3][Math.floor(Math.random() * 3)]
   return {
     projects: [{
-      id: 1, name: '67元快樂研究小組', type: 'split',
-      members: [
-        { id: 1, name: '阿肥' },
-        { id: 2, name: '67哥' },
-        { id: 3, name: '胖虎' },
-      ],
-      cats: { out: [...CATS.out, '🐸 智商稅'], in: [...CATS.in] },
-      expenses: [
-        { id: 1, cat: '🧋 飲料', desc: '請全員喝 67 嵐(大杯全糖去冰)', amount: 670, payer: 1, splitters: [1, 2, 3], date: '7/15' },
-        { id: 2, cat: '🐸 智商稅', desc: '會發光的青蛙帽(戴一次就壞)', amount: 67, payer: 2, splitters: [2], date: '7/15' },
-        {
-          id: 3, cat: '🍽️ 晚餐', desc: '深夜雞排懺悔餐', amount: 667, mode: 'exact',
-          paid: { 2: 667 }, spent: { 1: 500, 2: 67, 3: 100 }, payer: 0, splitters: [], date: '7/16',
-        },
-        {
-          id: 4, cat: '🎮 娛樂', desc: '夾娃娃機夾到懷疑人生', amount: 676, mode: 'random',
-          payer: 3, candidates: [1, 2, 3], loser: 2, revealed: true, splitters: [], date: '7/16',
-        },
-        {
-          id: 5, cat: '📦 其他', desc: '神秘的 6767 元支出(不要問)', amount: 6767, mode: 'random',
-          payer: 1, candidates: [1, 2, 3], losers: [demoLoser], loser: demoLoser, revealed: false, splitters: [], date: '7/17',
-        },
-      ],
-      chats: [
-        { name: '阿肥', text: '誰吃了我 500 的雞排?自首從寬', time: '7/16 21:06' },
-        { name: '67哥', text: '我只出 67,多一塊都是對我的侮辱', time: '7/16 21:07' },
-        { name: '胖虎', text: '那筆 6767 先說好,開獎抽中我就退出小組', time: '7/17 09:41' },
-      ],
-      nextMemberId: 4, nextExpenseId: 6,
+      id: 1, name: '我的帳本', type: 'split',
+      members: [],
+      cats: { out: [...CATS.out], in: [...CATS.in] },
+      expenses: [],
+      chats: [],
+      nextMemberId: 1, nextExpenseId: 1,
     }],
     currentProjectId: 1, nextProjectId: 2,
   }

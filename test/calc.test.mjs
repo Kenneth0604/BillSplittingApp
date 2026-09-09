@@ -8,7 +8,20 @@ const calc = await import('../src/lib/calc.js')
 let pass = 0, fail = 0
 const t = (name, cond) => (cond ? (pass++, console.log('✓', name)) : (fail++, console.log('✗', name)))
 
-// 67 範例專案的既知答案
+// 測試用固定資料(涵蓋均分 / 特定付款 / 已開獎與未開獎的隨機付款)
+Object.assign(store.proj(), {
+  members: [{ id: 1, name: '阿肥' }, { id: 2, name: '67哥' }, { id: 3, name: '胖虎' }],
+  expenses: [
+    { id: 1, cat: '🧋 飲料', amount: 670, payer: 1, splitters: [1, 2, 3], date: '7/15' },
+    { id: 2, cat: '📦 其他', amount: 67, payer: 2, splitters: [2], date: '7/15' },
+    { id: 3, cat: '🍽️ 晚餐', amount: 667, mode: 'exact', paid: { 2: 667 }, spent: { 1: 500, 2: 67, 3: 100 }, payer: 0, splitters: [], date: '7/16' },
+    { id: 4, cat: '🎮 娛樂', amount: 676, mode: 'random', payer: 3, candidates: [1, 2, 3], loser: 2, revealed: true, splitters: [], date: '7/16' },
+    { id: 5, cat: '📦 其他', amount: 6767, mode: 'random', payer: 1, candidates: [1, 2, 3], losers: [2], loser: 2, revealed: false, splitters: [], date: '7/17' },
+  ],
+  nextMemberId: 4, nextExpenseId: 6,
+})
+
+// 既知答案
 const bal = calc.balances()
 t('餘額總和為零', Math.abs(Object.values(bal).reduce((a, b) => a + b, 0)) < 0.01)
 t('未開獎 6767 不列入', Math.abs(bal[1]) < 6000)
