@@ -1,8 +1,14 @@
 # Dependencies
 node_modules/
 
-# Capacitor：由 tools/build-web.mjs 產生，不需要進版控
+# Vite 建置產物(GitHub Actions 會自己建;Capacitor 的 webDir 也指向這裡)
+dist/
 www/
+
+# 本機環境變數
+.env
+.env.*
+!.env.example
 
 # AI tool generated directories
 .afsmycoder/
@@ -13,3 +19,7 @@ www/
 .aider*/
 .claude/
 .copilot/
+.mycoder/
+
+*.log
+.DS_Store

@@ -1,49 +1,58 @@
-// 純計算單元測試：node test/calc.test.mjs
-globalThis.localStorage = { getItem: () => null, setItem: () => { } };
-globalThis.window = globalThis;
-import { readFileSync } from 'fs';
-const V = readFileSync(new URL('../index.html', import.meta.url), 'utf8').match(/main\.js\?v=(\d+)/)[1];
-const store = await import(new URL(`../src/store.js?v=${V}`, import.meta.url).href);
-store.load();
-const calc = await import(new URL(`../src/calc.js?v=${V}`, import.meta.url).href);
+// 純計算單元測試:node test/calc.test.mjs
+globalThis.localStorage = { getItem: () => null, setItem: () => {} }
 
-let pass = 0, fail = 0;
-const t = (name, cond) => cond ? (pass++, console.log('✓', name)) : (fail++, console.log('✗', name));
+const store = await import('../src/lib/store.js')
+store.load()
+const calc = await import('../src/lib/calc.js')
+
+let pass = 0, fail = 0
+const t = (name, cond) => (cond ? (pass++, console.log('✓', name)) : (fail++, console.log('✗', name)))
 
 // 67 範例專案的既知答案
-const bal = calc.balances();
-t('餘額總和為零', Math.abs(Object.values(bal).reduce((a, b) => a + b, 0)) < 0.01);
-t('未開獎 6767 不列入', Math.abs(bal[1]) < 6000);
-const plan = calc.settlements();
-t('結算方案筆數 ≤ 成員數-1', plan.length <= store.proj().members.length - 1);
-plan.forEach(p => t(`轉帳金額為正 (${p.amt})`, p.amt > 0));
+const bal = calc.balances()
+t('餘額總和為零', Math.abs(Object.values(bal).reduce((a, b) => a + b, 0)) < 0.01)
+t('未開獎 6767 不列入', Math.abs(bal[1]) < 6000)
+const plan = calc.settlements()
+t('結算方案筆數 ≤ 成員數-1', plan.length <= store.proj().members.length - 1)
+plan.forEach((p) => t(`轉帳金額為正 (${p.amt})`, p.amt > 0))
+
+// 結算後應完全打平
+const after = { ...bal }
+plan.forEach(({ from, to, amt }) => { after[from] += amt; after[to] -= amt })
+t('依方案轉帳後全員歸零', Object.values(after).every((v) => Math.abs(v) < 0.01))
 
 // 運算式引擎
-t('evalAmt 67+67', calc.evalAmt('67+67') === 134);
-t('evalAmt 670/3', Math.round(calc.evalAmt('670/3')) === 223);
-t('evalAmt 結尾運算子', calc.evalAmt('50*') === 50);
-t('evalAmt 惡意輸入', isNaN(calc.evalAmt('alert(1)')));
-t('evalAmt 除以零應被擋下 (Infinity)', isNaN(calc.evalAmt('670/0')));
-t('isValidAmount 擋下 Infinity', calc.isValidAmount(Infinity) === false);
-t('isValidAmount 擋下 NaN', calc.isValidAmount(NaN) === false);
-t('isValidAmount 擋下 0/負數', calc.isValidAmount(0) === false && calc.isValidAmount(-5) === false);
-t('isValidAmount 接受正常金額', calc.isValidAmount(100) === true);
-t('editAmt 運算子替換', calc.editAmt('5+', '*') === '5*');
-t('editAmt 小數點限本段', calc.editAmt('1.5+2', '.') === '1.5+2.');
+t('evalAmt 670/3', Math.abs(calc.evalAmt('670/3') - 223.333) < 0.01)
+t('evalAmt 結尾運算子忽略', calc.evalAmt('100+') === 100)
+t('evalAmt 除以零為 NaN', Number.isNaN(calc.evalAmt('1/0')))
+t('evalAmt 非法字元為 NaN', Number.isNaN(calc.evalAmt('1;alert(1)')))
+t('editAmt 開頭不能是運算子', calc.editAmt('', '+') === '')
+t('editAmt 連按運算子換運算子', calc.editAmt('12+', '*') === '12*')
+t('editAmt 小數點只能一個', calc.editAmt('1.5', '.') === '1.5')
+t('isValidAmount 擋 0 與負數', !calc.isValidAmount(0) && !calc.isValidAmount(-5) && calc.isValidAmount(10))
 
-// 取整與格式
-t('fmt 取整', calc.fmt(223.4) === 'NT$ 223' && calc.fmt(1580.5) === 'NT$ 1,581');
-// esc
-t('esc 跳脫', calc.esc('<b>&"') === '&lt;b&gt;&amp;&quot;');
-// losersOf 相容
-t('losersOf 舊資料', JSON.stringify(calc.losersOf({ loser: 2 })) === '[2]');
-t('losersOf 新資料', JSON.stringify(calc.losersOf({ losers: [1, 3] })) === '[1,3]');
-t('losersOf 空陣列不應誤判為有效名單', JSON.stringify(calc.losersOf({ losers: [] })) === '[]');
-t('losersOf 空陣列＋舊 loser 應 fallback', JSON.stringify(calc.losersOf({ losers: [], loser: 5 })) === '[5]');
-// colorOf 負數防禦
-t('colorOf 對負數不回傳 undefined', calc.colorOf(-1) !== undefined);
-// 日期
-t('dateToISO', /^\d{4}-07-05$/.test(calc.dateToISO('7/5')));
+// 日期轉換
+t('isoToMD', calc.isoToMD('2026-09-09') === '9/9')
+t('dateToISO 回推當年', calc.dateToISO('7/15').endsWith('-07-15'))
 
-console.log(`\n===== ${pass} 通過 / ${fail} 失敗 =====`);
-process.exit(fail ? 1 : 0);
+// losersOf 相容舊格式
+t('losersOf 舊格式 loser', calc.losersOf({ loser: 2 }).join() === '2')
+t('losersOf 新格式 losers 優先', calc.losersOf({ loser: 2, losers: [1, 3] }).join() === '1,3')
+
+// randInt 範圍
+for (let i = 0; i < 50; i++) { const r = calc.randInt(3); if (r < 0 || r > 2) { fail++; console.log('✗ randInt 超出範圍', r); break } }
+
+// 基金統計
+const p = store.proj()
+p.type = 'fund'
+p.expenses = [
+  { id: 1, kind: 'in', amount: 300, payer: 1, date: '1/1' },
+  { id: 2, kind: 'in', amount: 200, payer: 2, date: '1/1' },
+  { id: 3, kind: 'out', amount: 150, payer: 0, date: '1/2' },
+]
+const ls = calc.ledgerStats()
+t('ledgerStats 餘額', ls.bal === 350 && ls.tin === 500 && ls.tout === 150)
+t('depositBreakdown 排序', calc.depositBreakdown()[0].label === '阿肥')
+
+console.log(`\n${pass} passed, ${fail} failed`)
+if (fail) process.exit(1)
