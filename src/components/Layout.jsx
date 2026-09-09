@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useApp } from '../lib/app.jsx'
 import { useSheet } from './Sheet.jsx'
-import { balances, fmt, ledgerStats, settlements } from '../lib/calc.js'
+import { fmt, ledgerStats, settlements } from '../lib/calc.js'
 import { pullAll, syncMyProjects } from '../lib/cloud.js'
 import { chatName } from '../lib/nick.js'
 import ProjectSheet from '../sheets/ProjectSheet.jsx'
@@ -60,9 +60,6 @@ export default function Layout() {
     { key: 'members', label: t.members, icon: PeopleIcon },
     ...(duo ? [] : [{ key: 'settle', label: t.settle, icon: SettleIcon }]),
   ]
-
-  // 避免 balances() 在沒成員時噴錯:只在 split 用到
-  void balances
 
   return (
     <div className="mx-auto flex h-full max-w-md flex-col bg-bg">

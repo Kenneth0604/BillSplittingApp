@@ -6,14 +6,14 @@ import { Card, SectionTitle } from './ui.jsx'
 
 /** 留言區(每個專案獨立,最多保留 200 則) */
 export default function Chat() {
-  const { p, act, toast, version } = useApp()
+  const { p, act, toast } = useApp()
   const chats = p.chats || []
   const [who, setWho] = useState(chatName)
   const [text, setText] = useState('')
   const endRef = useRef(null)
 
   // 切換專案時帶入該專案暱稱
-  useEffect(() => { setWho(chatName()) }, [p.id, version === 0])
+  useEffect(() => { setWho(chatName()) }, [p.id])
 
   function send() {
     const name = who.trim()

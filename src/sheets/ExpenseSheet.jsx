@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useApp } from '../lib/app.jsx'
 import { useSheet } from '../components/Sheet.jsx'
 import { Card, Chips, Field, Select } from '../components/ui.jsx'
@@ -55,7 +55,7 @@ export default function ExpenseSheet({ editId = null }) {
   const title = editing
     ? (isSplit ? '✎ 編輯支出' : '✎ 編輯紀錄')
     : isSplit ? '新增支出' : '新增紀錄'
-  useMemo(() => setTitle(title), [title, setTitle])
+  useEffect(() => { setTitle(title) }, [title, setTitle])
 
   // 分類清單(依收支類型)
   const catKind = isSplit ? 'out' : kind
