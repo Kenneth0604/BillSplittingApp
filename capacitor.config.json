@@ -1,8 +1,8 @@
 {
   "appId": "app.kennethlin.billsplitting",
   "appName": "算錢用ㄉ東西",
-  "webDir": "www",
-  "backgroundColor": "#F2F2F7",
+  "webDir": "dist",
+  "backgroundColor": "#fbf4f8",
   "server": {
     "url": "https://kenneth0604.github.io/BillSplittingApp/",
     "androidScheme": "https"
@@ -11,6 +11,6 @@
     "contentInset": "always"
   },
   "android": {
-    "backgroundColor": "#F2F2F7"
+    "backgroundColor": "#fbf4f8"
   }
 }

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="算錢用ㄉ東西">
+  <meta name="theme-color" content="#F2F2F7">
+  <title>算錢用ㄉ東西</title>
+  <link rel="stylesheet" href="./style.css?v=25">
+</head>
+
+<body>
+
+  <div class="phone">
+    <div class="screen">
+      <div class="navbar">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="project-pill" id="projectPill" onclick="app.openProjectSheet()">
+            <span>📁</span><span id="projectName">專案</span><span class="chev">▾</span>
+          </div>
+          <div style="display:flex;gap:8px">
+            <div class="project-pill icon-pill" id="refreshBtn" onclick="app.manualRefresh()">
+              <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                <path d="M4 12a8 8 0 1 1 3 6.24" />
+                <path d="M4 18v-5h5" />
+              </svg>
+            </div>
+            <div class="project-pill icon-pill" onclick="app.openDateSheet()">
+              <svg fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                <rect x="3" y="5" width="18" height="16" rx="2" />
+                <path d="M3 10h18M8 3v4M16 3v4" />
+              </svg>
+            </div>
+            <div class="project-pill" id="userPill" onclick="app.openAuthSheet()">👤 登入</div>
+          </div>
+        </div>
+        <h1 id="navTitle">記記</h1>
+        <div class="sub" id="navSub"></div>
+      </div>
+
+      <div class="content" id="content"></div>
+
+      <button class="fab" id="fab" onclick="app.openSheet()">＋</button>
+
+      <div class="tabbar">
+        <div class="tab active" data-page="expenses" onclick="app.switchTab('expenses')">
+          <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <rect x="3" y="5" width="18" height="15" rx="2" />
+            <path d="M3 10h18M7 15h4" />
+          </svg>
+          <span id="tabLbl-expenses">記記</span>
+        </div>
+        <div class="tab" data-page="members" onclick="app.switchTab('members')" id="tabMembers">
+          <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <circle cx="9" cy="8" r="3.5" />
+            <path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6" />
+            <circle cx="17" cy="9" r="2.5" />
+            <path d="M16.5 14.5c2.8.3 5 2.4 5 5.5" />
+          </svg>
+          <span id="tabLbl-members">自訂</span>
+        </div>
+        <div class="tab" data-page="settle" id="tabSettle" onclick="app.switchTab('settle')">
+          <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+            <path d="M7 10l-4 4 4 4M3 14h13M17 4l4 4-4 4M21 8H8" />
+          </svg>
+          <span id="tabLbl-settle">結算</span>
+        </div>
+      </div>
+
+      <!-- Bottom sheet -->
+      <div class="sheet-mask" id="mask" onclick="app.closeSheet()"></div>
+      <div class="sheet" id="sheet">
+        <div class="handle"></div>
+        <h2 id="sheetTitle">新增支出</h2>
+        <div id="sheetBody"></div>
+      </div>
+
+      <div class="toast" id="toast"></div>
+    </div>
+  </div>
+
+  <div class="note">
+    <h3>📱 算錢用ㄉ東西 — 原型說明</h3>
+    三種專案類型：<br>
+    <b>多人分帳</b>：特定付款（預設）、均分、🎲 隨機抽人買單，自動算最少轉帳結算。<br>
+    <b>共同基金</b>：成員存入、從基金支出，追蹤餘額與每人應補繳。<br>
+    <b>個人記帳</b>：自己的收支帳本與統計。<br><br>
+    記帳可選固定分類再填詳細說明；統計頁有支出分類與成員圓餅圖。<br><br>
+    資料存在瀏覽器；設定 Supabase 後可上雲多人同步（見部署指南）。iPhone 可用 Safari「加入主畫面」變成全螢幕 app。
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script type="module" src="./src/main.js?v=25"></script>
+</body>
+
+</html>
