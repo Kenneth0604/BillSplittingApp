@@ -6,10 +6,12 @@ import { AppProvider } from './lib/app.jsx'
 import { ThemeProvider } from './lib/theme.jsx'
 import { ToastProvider } from './lib/toast.jsx'
 import { SheetProvider } from './components/Sheet.jsx'
+import { installViewportFix } from './lib/viewportFix.js'
 import './index.css'
 
 // 1) 載入本機資料(必須在任何元件讀取 proj() 之前)
 const corrupted = store.load()
+installViewportFix()
 
 // 2) Service Worker(離線殼 + 資源快取)
 if ('serviceWorker' in navigator) {
