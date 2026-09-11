@@ -145,6 +145,9 @@ img { max-width: 100%; }
   .input { @apply w-full min-w-0 max-w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-base text-ink outline-none placeholder:text-muted/70 focus:border-primary focus:ring-2 focus:ring-primary/25; }
   textarea.input { resize: none; }
   select.input { text-overflow: ellipsis; }
+  /* iOS 的 date input 是 inline-flex 且帶原生外觀,會忽略 width:100% 以內建寬度撐出螢幕 */
+  input[type="date"].input { @apply block min-h-11 appearance-none; -webkit-appearance: none; }
+  input[type="date"].input::-webkit-date-and-time-value { text-align: left; }
   .label { @apply mb-1.5 block text-sm font-medium text-ink; }
   .section-title { @apply mb-2 flex items-center gap-2 text-sm font-semibold text-ink; }
   .empty { @apply rounded-2xl bg-surface p-6 text-center text-sm text-muted shadow-sm ring-1 ring-line; }
