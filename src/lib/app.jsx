@@ -1,5 +1,6 @@
 // React 資料層:把 store / cloud 包成 context,資料變動時整體重繪
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import * as store from './store.js'
 import * as cloud from './cloud.js'
 import { useToast } from './toast.jsx'
@@ -9,9 +10,14 @@ const AppCtx = createContext(null)
 export function AppProvider({ children }) {
   const toast = useToast()
   const [version, setVersion] = useState(0)
-  const [page, setPageState] = useState('expenses')
   const [authUser, setAuthUser] = useState(cloud.authUser)
   const [admin, setAdmin] = useState(false)
+
+  // 頁面由 hash 路由決定(#/expenses、#/members、#/settle);對外仍提供 page / setPage 讓各 sheet 沿用
+  const location = useLocation()
+  const navigate = useNavigate()
+  const page = location.pathname.replace(/^\//, '') || 'expenses'
+  const setPage = useCallback((pg) => navigate(`/${pg}`), [navigate])
 
   // 接線:store 變動 → 重繪;雲端事件 → toast / 重繪 / 登入狀態
   useEffect(() => {
@@ -26,14 +32,19 @@ export function AppProvider({ children }) {
     if (cloud.cloudOn()) {
       cloud.initAuth()
       cloud.pullAll()
-      const poll = setInterval(cloud.pullAll, 20000)
+      // Realtime 即時推送為主;每 60 秒輪詢 + 聚焦 / 回前景 / 恢復連線為備援
+      const unsubRt = cloud.subscribeRealtime()
+      const poll = setInterval(cloud.pullAll, 60000)
       const onVisible = () => document.visibilityState === 'visible' && cloud.pullAll()
       window.addEventListener('focus', cloud.pullAll)
+      window.addEventListener('online', cloud.pullAll)
       document.addEventListener('visibilitychange', onVisible)
       return () => {
         unsub()
+        unsubRt()
         clearInterval(poll)
         window.removeEventListener('focus', cloud.pullAll)
+        window.removeEventListener('online', cloud.pullAll)
         document.removeEventListener('visibilitychange', onVisible)
       }
     }
@@ -46,8 +57,6 @@ export function AppProvider({ children }) {
     store.save()
     return r
   }, [])
-
-  const setPage = useCallback((pg) => setPageState(pg), [])
 
   const value = useMemo(() => {
     const p = store.proj()

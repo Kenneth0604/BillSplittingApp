@@ -97,7 +97,7 @@ legacy/                               舊版(單一 HTML + 原生 ES Modules)原
 - **需要登入**:上雲、加入專案、同步都以登入身分執行(RLS 在後端驗證權限,見第五章)。
 - **上雲**:專案 JSON 整包(去掉 `cloud` 欄位)存進 `shared_projects` 表,產生 6 碼分享代碼。
 - **推送**:任何 `save()` 觸發 800ms 防抖動後,把所有已上雲專案 update 上去(內容沒變就略過)。
-- **拉取**:每 20 秒、視窗重新聚焦、回到前景時,先比對雲端 `updated_at`,較新才抓整包蓋回本機並重繪。
+- **拉取**:透過 Supabase Realtime 訂閱 `shared_projects` 的 `postgres_changes`,有人改動就立即拉取;另以每 60 秒輪詢、視窗重新聚焦、回到前景、網路恢復(`online`)作為備援。每次拉取都先比對雲端 `updated_at`,較新才抓整包蓋回本機並重繪。
 - **衝突策略**:最後寫入者獲勝(Last-Write-Wins)。
 
 ### 2.4 帳號與身分
@@ -142,7 +142,7 @@ legacy/                               舊版(單一 HTML + 原生 ES Modules)原
 ```bash
 npm install
 npm run dev          # http://localhost:5174/BillSplittingApp/
-npm test             # 純計算單元測試(test/calc.test.mjs)
+npm test             # 純計算單元測試(Vitest,test/calc.test.js;npm run test:watch 可監看)
 npm run build        # 產出 dist/
 ```
 
@@ -167,7 +167,7 @@ Supabase 免費方案 7 天沒有活動會暫停專案,[`.github/workflows/keepa
 | `SUPABASE_URL` / `SUPABASE_KEY` | `src/lib/cloud.js` | Supabase 連線(可用環境變數覆寫) |
 | `ADMIN_EMAILS` | `src/lib/cloud.js` | 管理員 email(真正的權限在資料庫 `is_admin()`) |
 | `CATS` | `src/lib/store.js` | 新專案的預設分類 |
-| `setInterval(cloud.pullAll, 20000)` | `src/lib/app.jsx` | 同步拉取頻率 |
+| `setInterval(cloud.pullAll, 60000)` | `src/lib/app.jsx` | 備援輪詢頻率(主要靠 Realtime 即時推送) |
 | `defaultData()` | `src/lib/store.js` | 第一次開啟時的範例資料 |
 | `THEMES` | `src/lib/theme.jsx` | 主題清單;色票在 `src/index.css` |
 
@@ -314,7 +314,17 @@ begin
     delete from admins where user_id = p_user;
   end if;
 end $$;
+
+-- Realtime:讓成員即時收到專案更新(已加入過會略過)
+do $$
+begin
+  alter publication supabase_realtime add table public.shared_projects;
+exception when duplicate_object then
+  null;
+end $$;
 ```
+
+既有的資料庫請在 SQL Editor 執行一次最後那段 Realtime 片段,把 `shared_projects` 加進 `supabase_realtime` publication,否則前端訂閱不會收到任何變更(只剩備援輪詢在跑)。
 
 ## 六、行動裝置 App(Capacitor)
 

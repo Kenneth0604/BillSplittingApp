@@ -1,6 +1,6 @@
 {
   "name": "billsplittingapp",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "type": "module",
   "description": "算錢用ㄉ東西:多人分帳 / 共同基金 / 個人記帳 PWA(React + Vite + Tailwind + Supabase),另以 Capacitor 包裝成 iOS / Android App",
@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node test/calc.test.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "cap:sync": "npm run build && npx cap sync",
     "cap:sync:ios": "npm run build && npx cap sync ios",
     "cap:sync:android": "npm run build && npx cap sync android",
@@ -21,13 +22,15 @@
     "@capacitor/ios": "^6.2.0",
     "@supabase/supabase-js": "^2.116.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "react-router-dom": "^7.18.3"
   },
   "devDependencies": {
     "@capacitor/cli": "^6.2.0",
     "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "^6.1.1",
     "tailwindcss": "^4.3.3",
-    "vite": "^8.2.2"
+    "vite": "^8.2.2",
+    "vitest": "^5.0.0"
   }
 }

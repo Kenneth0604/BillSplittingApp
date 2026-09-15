@@ -92,6 +92,8 @@ export default function AuthSheet() {
           <button type="button" disabled={busy} onClick={signup} className="btn-secondary mt-2 w-full">還沒有帳號?註冊</button>
         </form>
       )}
+
+      <p className="mt-6 text-center text-xs text-muted">算錢用ㄉ東西 v{__APP_VERSION__}</p>
     </div>
   )
 }

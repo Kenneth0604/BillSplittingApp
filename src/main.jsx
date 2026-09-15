@@ -1,11 +1,14 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import { HashRouter } from 'react-router-dom'
 import App from './App.jsx'
 import * as store from './lib/store.js'
 import { AppProvider } from './lib/app.jsx'
 import { ThemeProvider } from './lib/theme.jsx'
 import { ToastProvider } from './lib/toast.jsx'
 import { SheetProvider } from './components/Sheet.jsx'
+import ErrorBoundary from './components/ErrorBoundary.jsx'
+import { registerServiceWorker } from './lib/sw-register.js'
 import { installViewportFix } from './lib/viewportFix.js'
 import './index.css'
 
@@ -13,27 +16,25 @@ import './index.css'
 const corrupted = store.load()
 installViewportFix()
 
-// 2) Service Worker(離線殼 + 資源快取)
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker
-      .register(`${import.meta.env.BASE_URL}sw.js`, { scope: import.meta.env.BASE_URL })
-      .then((reg) => reg.update().catch(() => {}))
-      .catch((err) => console.warn('Service Worker 註冊失敗', err))
-  })
-}
+// 2) Service Worker(離線殼 + 資源快取;新版接手時由 Layout 顯示「重新載入」提示)
+registerServiceWorker()
 
+// HashRouter:GitHub Pages 為靜態站台,用 hash 路由避免重新整理時 404
 function Root() {
   return (
-    <ThemeProvider>
-      <ToastProvider>
-        <AppProvider>
-          <SheetProvider>
-            <App />
-          </SheetProvider>
-        </AppProvider>
-      </ToastProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <ToastProvider>
+          <HashRouter>
+            <AppProvider>
+              <SheetProvider>
+                <App />
+              </SheetProvider>
+            </AppProvider>
+          </HashRouter>
+        </ToastProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   )
 }
 

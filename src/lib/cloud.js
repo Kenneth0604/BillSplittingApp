@@ -84,6 +84,16 @@ async function pullAll() {
   } finally { pulling = false }
 }
 
+/** 訂閱 shared_projects 的變更(RLS 只會推送自己是成員的專案),收到就重新拉取;回傳取消訂閱函式 */
+function subscribeRealtime() {
+  if (!cloudOn()) return () => {}
+  const channel = sb
+    .channel('billsplit-projects')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'shared_projects' }, () => { pullAll() })
+    .subscribe()
+  return () => { sb.removeChannel(channel) }
+}
+
 /* ---------- 帳號系統(Supabase Auth,Email + 密碼) ---------- */
 export let authUser = null // { id, email, nickname, avatar }
 function setAuthUser(u) {
@@ -143,6 +153,6 @@ async function initAuth() {
 }
 
 export {
-  cloudOn, genCode, projPayload, pushProject, schedulePush, pullAll,
+  cloudOn, genCode, projPayload, pushProject, schedulePush, pullAll, subscribeRealtime,
   isAdmin, ADMIN_EMAILS, setAuthUser, syncMyProjects, initAuth, refreshAdminFlag,
 }

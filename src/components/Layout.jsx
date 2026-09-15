@@ -1,16 +1,15 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useApp } from '../lib/app.jsx'
 import { useSheet } from './Sheet.jsx'
 import { fmt, ledgerStats, settlements } from '../lib/calc.js'
 import { pullAll, syncMyProjects } from '../lib/cloud.js'
+import { onAppUpdate } from '../lib/sw-register.js'
 import { chatName } from '../lib/nick.js'
 import ProjectSheet from '../sheets/ProjectSheet.jsx'
 import DateSheet from '../sheets/DateSheet.jsx'
 import AuthSheet from '../sheets/AuthSheet.jsx'
 import ExpenseSheet from '../sheets/ExpenseSheet.jsx'
-import Expenses from '../pages/Expenses.jsx'
-import Members from '../pages/Members.jsx'
-import Settle from '../pages/Settle.jsx'
 
 function titles(p) {
   return {
@@ -38,12 +37,18 @@ function subtitle(page, p, duo) {
 
 export default function Layout() {
   const app = useApp()
-  const { p, page, setPage, duo, authUser, isAdmin, cloudOn, toast } = app
+  const { p, page, duo, authUser, isAdmin, cloudOn, toast } = app
   const sheet = useSheet()
+  const navigate = useNavigate()
   const [refreshing, setRefreshing] = useState(false)
+  const [updateReady, setUpdateReady] = useState(false)
+  useEffect(() => onAppUpdate(() => setUpdateReady(true)), [])
 
-  // 雙人模式沒有結算頁
+  // 雙人模式沒有結算頁:標題先以記記頁呈現,並把路由導回 /expenses
   const effectivePage = duo && page === 'settle' ? 'expenses' : page
+  useEffect(() => {
+    if (duo && page === 'settle') navigate('/expenses', { replace: true })
+  }, [duo, page, navigate])
   const t = titles(p)
 
   async function refresh() {
@@ -90,10 +95,14 @@ export default function Layout() {
         </div>
       </header>
 
+      {updateReady && (
+        <button onClick={() => window.location.reload()} className="flex items-center justify-center gap-2 bg-success-soft px-4 py-1.5 text-xs font-medium text-success">
+          ✨ 有新版本 · 點這裡重新載入
+        </button>
+      )}
+
       <main className="relative flex-1 overflow-x-hidden overflow-y-auto px-4 pb-6 pt-4">
-        {effectivePage === 'expenses' && <Expenses />}
-        {effectivePage === 'members' && <Members />}
-        {effectivePage === 'settle' && <Settle />}
+        <Outlet />
       </main>
 
       {effectivePage === 'expenses' && (
@@ -109,14 +118,14 @@ export default function Layout() {
       <nav className="pb-safe z-10 shrink-0 border-t border-line bg-surface">
         <div className={`mx-auto grid max-w-md ${tabs.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
           {tabs.map(({ key, label, icon: Icon }) => (
-            <button
+            <NavLink
               key={key}
-              onClick={() => setPage(key)}
-              className={`flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${effectivePage === key ? 'text-primary' : 'text-muted'}`}
+              to={`/${key}`}
+              className={({ isActive }) => `flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${isActive ? 'text-primary' : 'text-muted'}`}
             >
               <Icon className="h-6 w-6" />
               {label}
-            </button>
+            </NavLink>
           ))}
         </div>
       </nav>
