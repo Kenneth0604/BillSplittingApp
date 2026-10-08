@@ -143,9 +143,8 @@ img { max-width: 100%; }
   .card {
     @apply overflow-hidden rounded-2xl;
     background: var(--t-surface);
-    -webkit-backdrop-filter: blur(20px);
-    backdrop-filter: blur(20px);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    backdrop-filter: blur(40px) saturate(180%);
   }
 
   .card-separator {
@@ -159,14 +158,12 @@ img { max-width: 100%; }
   .btn-primary {
     background: var(--t-primary);
     color: var(--t-primary-fg);
-    box-shadow: 0 2px 8px rgba(0,122,255,0.3);
   }
   .btn-secondary {
     background: var(--t-surface);
     color: var(--t-ink);
-    -webkit-backdrop-filter: blur(20px);
-    backdrop-filter: blur(20px);
-    box-shadow: 0 0.5px 1px rgba(0,0,0,0.05);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    backdrop-filter: blur(40px) saturate(180%);
     border: 0.5px solid var(--t-line);
   }
   .btn-success { background: var(--t-success); color: white; }
@@ -182,8 +179,8 @@ img { max-width: 100%; }
     background: var(--t-surface);
     color: var(--t-ink);
     border: 0.5px solid var(--t-line);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
   }
   .chip-active {
     background: var(--t-primary);
@@ -217,8 +214,8 @@ img { max-width: 100%; }
   .empty {
     @apply rounded-2xl p-8 text-center text-[15px] text-muted;
     background: var(--t-surface);
-    -webkit-backdrop-filter: blur(20px);
-    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    backdrop-filter: blur(40px) saturate(180%);
   }
 }
 

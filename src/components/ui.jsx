@@ -42,7 +42,7 @@ export function IconBtn({ children, onClick, tone = 'muted', title }) {
 export function StatCard({ label, big, meta, tone = 'hero', children }) {
   const cls = { hero: 'stat-hero', green: 'stat-green', purple: 'stat-purple' }[tone]
   return (
-    <section className={`${cls} rounded-3xl p-6 text-white shadow-lg`} style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
+    <section className={`${cls} rounded-3xl p-6 text-white`}>
       <p className="text-[13px] font-medium text-white/80 tracking-tight">{label}</p>
       <div className="mt-1.5 text-[34px] font-bold tabular-nums leading-tight" style={{ letterSpacing: '-0.02em' }}>{big}</div>
       {meta && <p className="mt-1.5 text-[13px] text-white/70">{meta}</p>}

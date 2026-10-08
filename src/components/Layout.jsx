@@ -75,8 +75,8 @@ export default function Layout() {
         }} />
         <div style={{
           position: 'absolute', inset: 0,
-          WebkitBackdropFilter: 'blur(30px) saturate(180%)',
-          backdropFilter: 'blur(30px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+          backdropFilter: 'blur(40px) saturate(180%)',
         }} />
         <div className="relative">
           <div className="flex items-center justify-between gap-2 px-4 pt-3">
@@ -120,10 +120,9 @@ export default function Layout() {
         <button
           aria-label="新增"
           onClick={() => sheet.open(null, <ExpenseSheet />)}
-          className="fixed right-5 bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] z-20 flex h-14 w-14 items-center justify-center rounded-full text-3xl leading-none text-white shadow-lg active:scale-90 transition-all duration-200"
+          className="fixed right-5 bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] z-20 flex h-14 w-14 items-center justify-center rounded-full text-3xl leading-none text-white active:scale-90 transition-all duration-200"
           style={{
             background: 'var(--t-primary)',
-            boxShadow: '0 4px 16px rgba(0,122,255,0.4), 0 2px 8px rgba(0,122,255,0.2)',
           }}
         >
           ＋
@@ -138,8 +137,8 @@ export default function Layout() {
         }} />
         <div style={{
           position: 'absolute', inset: 0,
-          WebkitBackdropFilter: 'blur(30px) saturate(180%)',
-          backdropFilter: 'blur(30px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+          backdropFilter: 'blur(40px) saturate(180%)',
         }} />
         <div className="relative" style={{ borderTop: '0.5px solid var(--t-line)' }}>
           <div className={`mx-auto grid max-w-md ${tabs.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>

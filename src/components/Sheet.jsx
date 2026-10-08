@@ -95,7 +95,10 @@ function SheetView({ title, closing, onClose, children }) {
       />
       <div
         ref={sheetRef}
-        className="pb-safe absolute inset-x-0 bottom-0 mx-auto flex max-h-[88%] max-w-md flex-col rounded-t-3xl shadow-2xl"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        className="pb-safe absolute inset-x-0 bottom-0 mx-auto flex max-h-[88%] max-w-md flex-col rounded-t-3xl"
         style={{
           background: 'var(--t-bg)',
           transform: closing ? 'translateY(100%)' : 'translateY(0)',
@@ -106,16 +109,10 @@ function SheetView({ title, closing, onClose, children }) {
       >
         <div className="shrink-0 pt-3 pb-2" style={{
           background: 'var(--t-bg)',
-          WebkitBackdropFilter: 'blur(20px)',
-          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+          backdropFilter: 'blur(40px) saturate(180%)',
         }}>
-          <div
-            onTouchStart={onTouchStart}
-            onTouchMove={onTouchMove}
-            onTouchEnd={onTouchEnd}
-            className="mx-auto mb-2 h-1 w-9 rounded-full active:opacity-60"
-            style={{ background: 'var(--t-muted)' }}
-          />
+          <div className="mx-auto mb-2 h-1 w-9 rounded-full" style={{ background: 'var(--t-muted)' }} />
           {title && <h2 className="px-5 text-[17px] font-semibold tracking-tight text-ink">{title}</h2>}
         </div>
         <div ref={bodyRef} className="flex-1 overflow-y-auto overflow-x-hidden px-5 pb-8">
