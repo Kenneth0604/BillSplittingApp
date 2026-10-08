@@ -1,33 +1,30 @@
-// 共用的小元件:卡片、列、統計卡、空狀態、chips、頭貼、欄位
 import { colorOf, initials } from '../lib/calc.js'
 
 export function Card({ children, className = '' }) {
-  return <div className={`card overflow-hidden ${className}`}>{children}</div>
+  return <div className={`card ${className}`}>{children}</div>
 }
 
 export function SectionTitle({ children, className = '' }) {
-  return <h2 className={`section-title mt-4 px-1 ${className}`}>{children}</h2>
+  return <h2 className={`section-title ${className}`}>{children}</h2>
 }
 
-/** 列表列:左側頭貼、中間標題與說明、右側金額與動作按鈕 */
 export function Row({ avatar, title, detail, amount, amountClass = '', actions, onClick, className = '' }) {
   return (
     <div
       onClick={onClick}
-      className={`flex items-center gap-3 border-b border-line px-4 py-3 last:border-b-0 ${onClick ? 'cursor-pointer active:bg-surface-2' : ''} ${className}`}
+      className={`flex items-center gap-3 px-4 py-3.5 card-separator last:border-b-0 ${onClick ? 'cursor-pointer active:opacity-60 transition-opacity duration-150' : ''} ${className}`}
     >
       {avatar}
       <div className="min-w-0 flex-1">
-        <div className="truncate font-semibold text-ink">{title}</div>
-        {detail && <div className="mt-0.5 truncate text-xs text-muted">{detail}</div>}
+        <div className="truncate text-[15px] font-semibold text-ink" style={{ letterSpacing: '-0.01em' }}>{title}</div>
+        {detail && <div className="mt-0.5 truncate text-[13px] text-muted">{detail}</div>}
       </div>
-      {amount !== undefined && <div className={`shrink-0 text-right font-bold tabular-nums text-ink ${amountClass}`}>{amount}</div>}
+      {amount !== undefined && <div className={`shrink-0 text-right font-semibold tabular-nums text-[15px] text-ink ${amountClass}`}>{amount}</div>}
       {actions && <div className="flex shrink-0 items-center gap-1">{actions}</div>}
     </div>
   )
 }
 
-/** 列右側的小圖示按鈕 */
 export function IconBtn({ children, onClick, tone = 'muted', title }) {
   const cls = { muted: 'text-muted', primary: 'text-primary', danger: 'text-danger', warning: 'text-warning' }[tone]
   return (
@@ -35,7 +32,7 @@ export function IconBtn({ children, onClick, tone = 'muted', title }) {
       type="button"
       title={title}
       onClick={(e) => { e.stopPropagation(); onClick?.(e) }}
-      className={`flex h-9 w-9 items-center justify-center rounded-full text-base active:bg-surface-2 ${cls}`}
+      className={`flex h-9 w-9 items-center justify-center rounded-full text-base active:bg-black/5 dark:active:bg-white/10 transition-all duration-150 ${cls}`}
     >
       {children}
     </button>
@@ -45,10 +42,10 @@ export function IconBtn({ children, onClick, tone = 'muted', title }) {
 export function StatCard({ label, big, meta, tone = 'hero', children }) {
   const cls = { hero: 'stat-hero', green: 'stat-green', purple: 'stat-purple' }[tone]
   return (
-    <section className={`${cls} rounded-3xl p-5 text-white shadow-lg`}>
-      <p className="text-sm text-white/80">{label}</p>
-      <div className="mt-1 text-4xl font-bold tabular-nums leading-tight">{big}</div>
-      {meta && <p className="mt-1 text-xs text-white/75">{meta}</p>}
+    <section className={`${cls} rounded-3xl p-6 text-white shadow-lg`} style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
+      <p className="text-[13px] font-medium text-white/80 tracking-tight">{label}</p>
+      <div className="mt-1.5 text-[34px] font-bold tabular-nums leading-tight" style={{ letterSpacing: '-0.02em' }}>{big}</div>
+      {meta && <p className="mt-1.5 text-[13px] text-white/70">{meta}</p>}
       {children}
     </section>
   )
@@ -56,14 +53,13 @@ export function StatCard({ label, big, meta, tone = 'hero', children }) {
 
 export function Empty({ icon, children }) {
   return (
-    <div className="empty py-8">
-      {icon && <div className="mb-2 text-4xl">{icon}</div>}
+    <div className="empty">
+      {icon && <div className="mb-3 text-4xl">{icon}</div>}
       <div className="leading-relaxed">{children}</div>
     </div>
   )
 }
 
-/** 單選 / 多選 chips */
 export function Chips({ options, value, onChange, multi = false, className = '' }) {
   const isOn = (v) => (multi ? (value || []).includes(v) : value === v)
   const toggle = (v) => {
@@ -92,15 +88,14 @@ export function Chips({ options, value, onChange, multi = false, className = '' 
 
 export function Field({ label, children, hint }) {
   return (
-    <div className="mb-4">
+    <div className="mb-5">
       {label && <span className="label">{label}</span>}
       {children}
-      {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
+      {hint && <p className="mt-1.5 text-[13px] text-muted">{hint}</p>}
     </div>
   )
 }
 
-/** 成員頭貼:有照片用照片,沒有用色塊字首 */
 export function Avatar({ member, size = 'md', color, text }) {
   const dim = size === 'lg' ? 'h-20 w-20 text-2xl' : size === 'sm' ? 'h-8 w-8 text-xs' : 'h-10 w-10 text-base'
   if (member?.avatar) {

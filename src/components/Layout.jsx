@@ -25,7 +25,7 @@ function subtitle(page, p, duo) {
     if (duo) {
       const me = p.members.find((m) => m.name === chatName())
       const other = me ? p.members.find((m) => m.id !== me.id) : null
-      return `👥 雙人模式${other ? '｜與 ' + other.name : ''} · ${p.expenses.length} 筆`
+      return `雙人模式${other ? ' · 與 ' + other.name : ''} · ${p.expenses.length} 筆`
     }
     return `${p.expenses.length} 筆支出`
   }
@@ -44,7 +44,6 @@ export default function Layout() {
   const [updateReady, setUpdateReady] = useState(false)
   useEffect(() => onAppUpdate(() => setUpdateReady(true)), [])
 
-  // 雙人模式沒有結算頁:標題先以記記頁呈現,並把路由導回 /expenses
   const effectivePage = duo && page === 'settle' ? 'expenses' : page
   useEffect(() => {
     if (duo && page === 'settle') navigate('/expenses', { replace: true })
@@ -68,30 +67,42 @@ export default function Layout() {
 
   return (
     <div className="mx-auto flex h-full max-w-md flex-col bg-bg">
-      <header className="pt-safe hero shrink-0 text-white shadow">
-        <div className="flex items-center justify-between gap-2 px-4 pt-3">
-          <button onClick={() => sheet.open('我的專案', <ProjectSheet />)} className="flex min-w-0 items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-sm font-semibold active:bg-white/30">
-            <span aria-hidden>📁</span>
-            <span className="truncate">{p.name}</span>
-            <span className="text-white/70">▾</span>
-          </button>
-          <div className="flex shrink-0 items-center gap-1.5">
-            <HeaderIcon onClick={refresh} title="重新整理" dim={refreshing}>
-              <svg {...svgProps}><path d="M4 12a8 8 0 1 1 3 6.24" /><path d="M4 18v-5h5" /></svg>
-            </HeaderIcon>
-            <HeaderIcon onClick={() => sheet.open('📅 查看特定日期', <DateSheet />)} title="依日期查看">
-              <svg {...svgProps}><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>
-            </HeaderIcon>
-            <button onClick={() => sheet.open(authUser ? '我的帳號' : '登入 / 設定', <AuthSheet />)} className="flex h-9 items-center gap-1.5 rounded-full bg-white/20 px-2.5 text-sm font-semibold active:bg-white/30">
-              {authUser?.avatar ? <img src={authUser.avatar} alt="" className="h-6 w-6 rounded-full object-cover" /> : <span aria-hidden>👤</span>}
-              <span className="max-w-[72px] truncate">{authUser ? authUser.nickname : '登入'}</span>
-              {isAdmin && <span aria-hidden>🛡️</span>}
+      <header className="pt-safe relative z-20 shrink-0" style={{ background: 'transparent' }}>
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(135deg, var(--t-hero-from), var(--t-hero-to))',
+          opacity: 0.92,
+        }} />
+        <div style={{
+          position: 'absolute', inset: 0,
+          WebkitBackdropFilter: 'blur(30px) saturate(180%)',
+          backdropFilter: 'blur(30px) saturate(180%)',
+        }} />
+        <div className="relative">
+          <div className="flex items-center justify-between gap-2 px-4 pt-3">
+            <button onClick={() => sheet.open('我的專案', <ProjectSheet />)} className="flex min-w-0 items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-sm font-semibold active:bg-white/30" style={{ WebkitBackdropFilter: 'blur(10px)', backdropFilter: 'blur(10px)' }}>
+              <span aria-hidden>📁</span>
+              <span className="truncate">{p.name}</span>
+              <span className="text-white/70">▾</span>
             </button>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <HeaderIcon onClick={refresh} title="重新整理" dim={refreshing}>
+                <svg {...svgProps}><path d="M4 12a8 8 0 1 1 3 6.24" /><path d="M4 18v-5h5" /></svg>
+              </HeaderIcon>
+              <HeaderIcon onClick={() => sheet.open('📅 查看特定日期', <DateSheet />)} title="依日期查看">
+                <svg {...svgProps}><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>
+              </HeaderIcon>
+              <button onClick={() => sheet.open(authUser ? '我的帳號' : '登入 / 設定', <AuthSheet />)} className="flex h-9 items-center gap-1.5 rounded-full bg-white/20 px-2.5 text-sm font-semibold active:bg-white/30" style={{ WebkitBackdropFilter: 'blur(10px)', backdropFilter: 'blur(10px)' }}>
+                {authUser?.avatar ? <img src={authUser.avatar} alt="" className="h-6 w-6 rounded-full object-cover" /> : <span aria-hidden>👤</span>}
+                <span className="max-w-[72px] truncate">{authUser ? authUser.nickname : '登入'}</span>
+                {isAdmin && <span aria-hidden>🛡️</span>}
+              </button>
+            </div>
           </div>
-        </div>
-        <div className="px-4 pb-3 pt-2">
-          <h1 className="text-3xl font-bold tracking-tight">{t[effectivePage]}</h1>
-          <p className="mt-0.5 min-h-[1rem] text-xs text-white/80">{subtitle(effectivePage, p, duo)}</p>
+          <div className="px-4 pb-3 pt-2">
+            <h1 className="text-3xl font-bold tracking-tight text-white" style={{ letterSpacing: '-0.03em' }}>{t[effectivePage]}</h1>
+            <p className="mt-0.5 min-h-[1rem] text-xs text-white/80">{subtitle(effectivePage, p, duo)}</p>
+          </div>
         </div>
       </header>
 
@@ -109,24 +120,40 @@ export default function Layout() {
         <button
           aria-label="新增"
           onClick={() => sheet.open(null, <ExpenseSheet />)}
-          className="fixed right-5 bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] z-20 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-3xl leading-none text-primary-fg shadow-lg active:scale-95"
+          className="fixed right-5 bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] z-20 flex h-14 w-14 items-center justify-center rounded-full text-3xl leading-none text-white shadow-lg active:scale-90 transition-all duration-200"
+          style={{
+            background: 'var(--t-primary)',
+            boxShadow: '0 4px 16px rgba(0,122,255,0.4), 0 2px 8px rgba(0,122,255,0.2)',
+          }}
         >
           ＋
         </button>
       )}
 
-      <nav className="pb-safe z-10 shrink-0 border-t border-line bg-surface">
-        <div className={`mx-auto grid max-w-md ${tabs.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
-          {tabs.map(({ key, label, icon: Icon }) => (
-            <NavLink
-              key={key}
-              to={`/${key}`}
-              className={({ isActive }) => `flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${isActive ? 'text-primary' : 'text-muted'}`}
-            >
-              <Icon className="h-6 w-6" />
-              {label}
-            </NavLink>
-          ))}
+      <nav className="relative z-10 shrink-0" style={{ background: 'transparent' }}>
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'var(--t-surface)',
+          opacity: 0.92,
+        }} />
+        <div style={{
+          position: 'absolute', inset: 0,
+          WebkitBackdropFilter: 'blur(30px) saturate(180%)',
+          backdropFilter: 'blur(30px) saturate(180%)',
+        }} />
+        <div className="relative" style={{ borderTop: '0.5px solid var(--t-line)' }}>
+          <div className={`mx-auto grid max-w-md ${tabs.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+            {tabs.map(({ key, label, icon: Icon }) => (
+              <NavLink
+                key={key}
+                to={`/${key}`}
+                className={({ isActive }) => `flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium tracking-tight transition-colors duration-200 ${isActive ? 'text-primary' : 'text-muted'}`}
+              >
+                <Icon className="h-6 w-6" />
+                {label}
+              </NavLink>
+            ))}
+          </div>
         </div>
       </nav>
     </div>
@@ -135,7 +162,7 @@ export default function Layout() {
 
 function HeaderIcon({ children, onClick, title, dim }) {
   return (
-    <button onClick={onClick} title={title} className={`flex h-9 w-9 items-center justify-center rounded-full bg-white/20 active:bg-white/30 ${dim ? 'opacity-40' : ''}`}>
+    <button onClick={onClick} title={title} className={`flex h-9 w-9 items-center justify-center rounded-full bg-white/20 active:bg-white/30 transition-all duration-150 ${dim ? 'opacity-40' : ''}`} style={{ WebkitBackdropFilter: 'blur(10px)', backdropFilter: 'blur(10px)' }}>
       {children}
     </button>
   )

@@ -1,9 +1,5 @@
 @import "tailwindcss";
 
-/* ------------------------------------------------------------------
-   主題色票:透過 <html data-theme="blossom|graphite"> 切換
-   Tailwind 工具類別(bg-surface、text-ink、bg-primary ...)引用這些變數
-------------------------------------------------------------------- */
 @theme inline {
   --color-bg: var(--t-bg);
   --color-surface: var(--t-surface);
@@ -26,7 +22,6 @@
   --color-info-soft: var(--t-info-soft);
 }
 
-/* 粉粉:粉紅 × 薰衣草(預設) */
 :root,
 [data-theme="blossom"] {
   color-scheme: light;
@@ -53,7 +48,6 @@
   --t-hero-to: #a78bfa;
 }
 
-/* 黑黑:黑灰色系 */
 [data-theme="graphite"] {
   color-scheme: dark;
   --t-bg: #111316;
@@ -79,41 +73,62 @@
   --t-hero-to: #1b1e23;
 }
 
-/* ------------------------------------------------------------------
-   App 外殼:整頁固定,只允許 #root / main 垂直捲動
-   - 禁止整頁左右平移與橘皮彈跳,避免像網頁一樣可以拖動
-   - 內容區(Layout 的 <main>)才是捲動容器
-------------------------------------------------------------------- */
+[data-theme="apple"] {
+  color-scheme: light;
+  --t-bg: #f2f2f7;
+  --t-surface: rgba(255, 255, 255, 0.82);
+  --t-surface-2: #e8e8ed;
+  --t-line: rgba(60, 60, 67, 0.12);
+  --t-ink: #1c1c1e;
+  --t-muted: #8e8e93;
+  --t-primary: #007aff;
+  --t-primary-fg: #ffffff;
+  --t-primary-soft: rgba(0, 122, 255, 0.1);
+  --t-accent: #34c759;
+  --t-accent-soft: rgba(52, 199, 89, 0.1);
+  --t-success: #34c759;
+  --t-success-soft: rgba(52, 199, 89, 0.12);
+  --t-danger: #ff3b30;
+  --t-danger-soft: rgba(255, 59, 48, 0.12);
+  --t-warning: #ff9500;
+  --t-warning-soft: rgba(255, 149, 0, 0.12);
+  --t-info: #5856d6;
+  --t-info-soft: rgba(88, 86, 214, 0.12);
+  --t-hero-from: #007aff;
+  --t-hero-to: #5856d6;
+}
+
 html {
   height: 100%;
   overflow: hidden;
-  touch-action: pan-y;               /* 只接受垂直手勢,不做橫向平移 / 縮放 */
+  touch-action: pan-y;
   -webkit-text-size-adjust: 100%;
 }
 
 body {
-  position: fixed;                   /* 鎖住 body,任何溢出都不會讓整頁左右晃 */
-  inset: 0;                          /* 不宣告 height:讓 inset 撐滿整個視窗(含 iOS 安全區) */
+  position: fixed;
+  inset: 0;
   overflow: hidden;
   background: var(--t-bg);
   color: var(--t-ink);
   -webkit-tap-highlight-color: transparent;
   -webkit-font-smoothing: antialiased;
-  -webkit-touch-callout: none;       /* 長按不跳出連結預覽 */
-  -webkit-user-select: none;         /* 介面文字不可選取,更像原生 App */
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
   user-select: none;
   overscroll-behavior: none;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
 }
 
 #root {
   height: 100%;
-  height: var(--app-h, 100%);        /* 由 viewportFix.js 以 window.innerHeight 量測 */
+  height: var(--app-h, 100%);
   overflow-x: hidden;
-  overflow-y: auto;                  /* 登入頁等沒有內部捲動容器的畫面在此捲動 */
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
 
-/* 表單與可讀內容仍可選取 / 複製 */
 input, textarea, select, [data-selectable] {
   -webkit-user-select: text;
   user-select: text;
@@ -121,43 +136,119 @@ input, textarea, select, [data-selectable] {
 
 img { max-width: 100%; }
 
-/* iOS 安全區(瀏海與 Home 指示條) */
 .pt-safe { padding-top: env(safe-area-inset-top); }
 .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 
-.hero {
-  background: linear-gradient(135deg, var(--t-hero-from), var(--t-hero-to));
-}
-
 @layer components {
-  .card { @apply rounded-2xl bg-surface shadow-sm ring-1 ring-line; }
-  .btn, .btn-primary, .btn-secondary, .btn-success, .btn-danger, .btn-danger-outline {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-2xl px-4 py-3 font-semibold transition active:scale-[0.98] disabled:opacity-40 disabled:active:scale-100;
+  .card {
+    @apply overflow-hidden rounded-2xl;
+    background: var(--t-surface);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
   }
-  .btn-primary { @apply bg-primary text-primary-fg shadow; }
-  .btn-secondary { @apply bg-surface text-ink ring-1 ring-line; }
-  .btn-success { @apply bg-success text-white shadow; }
-  .btn-danger { @apply bg-danger text-white shadow; }
-  .btn-danger-outline { @apply bg-surface text-danger ring-1 ring-danger/40; }
-  .chip { @apply inline-flex items-center justify-center rounded-full px-3 py-1.5 text-sm font-medium ring-1 ring-line bg-surface text-ink; }
-  .chip-active { @apply bg-primary text-primary-fg ring-primary; }
-  /* min-w-0:iOS 的 input / select 有固定的內建最小寬度,放進 flex 列會撐破容器造成橫向捲動 */
-  .input { @apply w-full min-w-0 max-w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-base text-ink outline-none placeholder:text-muted/70 focus:border-primary focus:ring-2 focus:ring-primary/25; }
+
+  .card-separator {
+    border-bottom: 0.5px solid var(--t-line);
+  }
+
+  .btn, .btn-primary, .btn-secondary, .btn-success, .btn-danger, .btn-danger-outline {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-xl px-5 py-3 font-semibold text-[15px] transition-all active:scale-[0.97] disabled:opacity-40 disabled:active:scale-100;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-primary {
+    background: var(--t-primary);
+    color: var(--t-primary-fg);
+    box-shadow: 0 2px 8px rgba(0,122,255,0.3);
+  }
+  .btn-secondary {
+    background: var(--t-surface);
+    color: var(--t-ink);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    box-shadow: 0 0.5px 1px rgba(0,0,0,0.05);
+    border: 0.5px solid var(--t-line);
+  }
+  .btn-success { background: var(--t-success); color: white; }
+  .btn-danger { background: var(--t-danger); color: white; }
+  .btn-danger-outline {
+    background: transparent;
+    color: var(--t-danger);
+    border: 1px solid var(--t-danger);
+  }
+
+  .chip {
+    @apply inline-flex items-center justify-center rounded-full px-3.5 py-1.5 text-sm font-medium transition-all active:scale-[0.96];
+    background: var(--t-surface);
+    color: var(--t-ink);
+    border: 0.5px solid var(--t-line);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+  .chip-active {
+    background: var(--t-primary);
+    color: var(--t-primary-fg);
+    border-color: transparent;
+  }
+
+  .input {
+    @apply w-full min-w-0 max-w-full rounded-xl px-4 py-3 text-[17px] text-ink outline-none transition-all duration-200;
+    background: var(--t-surface-2);
+    border: 0.5px solid transparent;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  .input:focus {
+    border-color: var(--t-primary);
+    background: var(--t-surface);
+    box-shadow: 0 0 0 4px rgba(0,122,255,0.1);
+  }
   textarea.input { resize: none; }
   select.input { text-overflow: ellipsis; }
-  /* iOS 的 date input 是 inline-flex 且帶原生外觀,會忽略 width:100% 以內建寬度撐出螢幕 */
   input[type="date"].input { @apply block min-h-11 appearance-none; -webkit-appearance: none; }
   input[type="date"].input::-webkit-date-and-time-value { text-align: left; }
-  .label { @apply mb-1.5 block text-sm font-medium text-ink; }
-  .section-title { @apply mb-2 flex items-center gap-2 text-sm font-semibold text-ink; }
-  .empty { @apply rounded-2xl bg-surface p-6 text-center text-sm text-muted shadow-sm ring-1 ring-line; }
+
+  .label {
+    @apply mb-1.5 block text-[13px] font-semibold tracking-tight text-ink;
+    letter-spacing: -0.01em;
+  }
+  .section-title {
+    @apply mb-2 flex items-center gap-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted;
+  }
+  .empty {
+    @apply rounded-2xl p-8 text-center text-[15px] text-muted;
+    background: var(--t-surface);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+  }
 }
 
-/* ---------- 算錢用ㄉ東西 專用 ---------- */
 .amount-pos { color: var(--t-success); }
 .amount-neg { color: var(--t-danger); }
-.stat-hero { background: linear-gradient(135deg, var(--t-hero-from), var(--t-hero-to)); }
-.stat-green { background: linear-gradient(135deg, #16a37a, #0d9488); }
-.stat-purple { background: linear-gradient(135deg, #7c5cd6, #a78bfa); }
+
+.stat-hero {
+  background: linear-gradient(135deg, var(--t-hero-from), var(--t-hero-to));
+}
+.stat-green { background: var(--t-success); }
+.stat-purple { background: var(--t-info); }
 [data-theme="graphite"] .stat-green { background: linear-gradient(135deg, #1f5c48, #14423a); }
 [data-theme="graphite"] .stat-purple { background: linear-gradient(135deg, #3b2f66, #2a2544); }
+
+@keyframes spring-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes spring-down {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(100%); opacity: 0; }
+}
+
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
