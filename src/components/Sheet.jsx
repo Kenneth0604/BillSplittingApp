@@ -31,23 +31,24 @@ export function useSheet() {
 }
 
 function SheetView({ title, closing, onClose, children }) {
-  const ref = useRef(null)
+  const sheetRef = useRef(null)
+  const bodyRef = useRef(null)
   const start = useRef(null)
   const translateY = useRef(0)
 
   const onTouchStart = (e) => {
+    const scrollTop = bodyRef.current?.scrollTop ?? 0
     start.current = {
       y: e.touches[0].clientY,
-      scroll: ref.current?.scrollTop ?? 0,
+      scroll: scrollTop,
       t: e.timeStamp,
-      translateY: translateY.current,
     }
   }
 
   const onTouchMove = (e) => {
     if (!start.current) return
     const dy = e.touches[0].clientY - start.current.y
-    const scrollTop = ref.current?.scrollTop ?? 0
+    const scrollTop = bodyRef.current?.scrollTop ?? 0
     if (scrollTop > 0 && dy < 0) {
       start.current = null
       return
@@ -55,9 +56,9 @@ function SheetView({ title, closing, onClose, children }) {
     const resistance = dy > 0 ? 1 - Math.min(dy / 600, 0.5) : 1
     const move = dy * resistance
     translateY.current = move
-    if (ref.current) {
-      ref.current.style.transform = `translateY(${move}px)`
-      ref.current.style.transition = 'none'
+    if (sheetRef.current) {
+      sheetRef.current.style.transform = `translateY(${move}px)`
+      sheetRef.current.style.transition = 'none'
     }
   }
 
@@ -70,18 +71,18 @@ function SheetView({ title, closing, onClose, children }) {
       onClose()
     } else {
       translateY.current = 0
-      if (ref.current) {
-        ref.current.style.transform = 'translateY(0)'
-        ref.current.style.transition = 'transform 0.4s cubic-bezier(0.32, 0.72, 0, 1)'
+      if (sheetRef.current) {
+        sheetRef.current.style.transform = 'translateY(0)'
+        sheetRef.current.style.transition = 'transform 0.4s cubic-bezier(0.32, 0.72, 0, 1)'
       }
     }
     start.current = null
   }
 
   useEffect(() => {
-    if (!closing && ref.current) {
-      ref.current.style.transform = 'translateY(0)'
-      ref.current.style.transition = 'transform 0.5s cubic-bezier(0.32, 0.72, 0, 1)'
+    if (!closing && sheetRef.current) {
+      sheetRef.current.style.transform = 'translateY(0)'
+      sheetRef.current.style.transition = 'transform 0.5s cubic-bezier(0.32, 0.72, 0, 1)'
     }
   }, [closing])
 
@@ -93,11 +94,8 @@ function SheetView({ title, closing, onClose, children }) {
         onClick={onClose}
       />
       <div
-        ref={ref}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-        className="pb-safe absolute inset-x-0 bottom-0 mx-auto max-h-[88%] max-w-md overflow-y-auto overflow-x-hidden rounded-t-3xl shadow-2xl"
+        ref={sheetRef}
+        className="pb-safe absolute inset-x-0 bottom-0 mx-auto flex max-h-[88%] max-w-md flex-col rounded-t-3xl shadow-2xl"
         style={{
           background: 'var(--t-bg)',
           transform: closing ? 'translateY(100%)' : 'translateY(0)',
@@ -106,15 +104,23 @@ function SheetView({ title, closing, onClose, children }) {
             : 'transform 0.5s cubic-bezier(0.32, 0.72, 0, 1)',
         }}
       >
-        <div className="sticky top-0 z-10 pt-3 pb-2" style={{
+        <div className="shrink-0 pt-3 pb-2" style={{
           background: 'var(--t-bg)',
           WebkitBackdropFilter: 'blur(20px)',
           backdropFilter: 'blur(20px)',
         }}>
-          <div className="mx-auto mb-2 h-1 w-9 rounded-full" style={{ background: 'var(--t-muted)' }} />
+          <div
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+            className="mx-auto mb-2 h-1 w-9 rounded-full active:opacity-60"
+            style={{ background: 'var(--t-muted)' }}
+          />
           {title && <h2 className="px-5 text-[17px] font-semibold tracking-tight text-ink">{title}</h2>}
         </div>
-        <div className="px-5 pb-8">{children}</div>
+        <div ref={bodyRef} className="flex-1 overflow-y-auto overflow-x-hidden px-5 pb-8">
+          {children}
+        </div>
       </div>
     </div>
   )
