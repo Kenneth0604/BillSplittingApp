@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useApp } from '../lib/app.jsx'
 import { useSheet } from '../components/Sheet.jsx'
 import { Avatar, Card, Empty, IconBtn, Row, SectionTitle, TypeTag } from '../components/ui.jsx'
-import { sb, ADMIN_EMAILS, refreshAdminFlag } from '../lib/cloud.js'
+import { sb, refreshAdminFlag } from '../lib/cloud.js'
 import { initials } from '../lib/calc.js'
 import { CATS } from '../lib/store.js'
 import { autoAddSelfAsMember, ensureProjNick } from '../lib/nick.js'
@@ -136,7 +136,6 @@ export function AdminUsersSheet() {
       <Card>
         {rows.map((u) => {
           const me = authUser && u.id === authUser.id
-          const founder = (u.email || '').toLowerCase() === ADMIN_EMAILS[0]
           const day = String(u.created_at || '').slice(0, 10)
           return (
             <Row
@@ -151,7 +150,7 @@ export function AdminUsersSheet() {
               }
               detail={`${u.email} · ${u.projects} 個專案 · 註冊 ${day}`}
               actions={
-                !(me || founder) && (
+                !me && (
                   <>
                     <button onClick={() => toggleAdmin(u, !u.is_admin)} className={`chip py-1 text-[11px] ${u.is_admin ? 'text-muted' : 'text-warning'}`}>
                       {u.is_admin ? '移除admin' : '設為admin'}

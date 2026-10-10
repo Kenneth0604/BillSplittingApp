@@ -11,8 +11,8 @@ export const hooks = {
   onAdmin: () => {},     // 管理員旗標改變
 }
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://bklyaejmluevxqufbkma.supabase.co'
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_2ykyBPqmtCcY0hj8yxIySw_VFVhglh_'
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 export let sb = null
 try {
@@ -55,11 +55,9 @@ function schedulePush() {
 }
 
 /* ---------- 管理員 ---------- */
-const ADMIN_EMAILS = ['piuuuuu20069564@gmail.com']
 export let adminFlag = false
 function isAdmin() {
-  if (!authUser) return false
-  return adminFlag || ADMIN_EMAILS.includes((authUser.email || '').toLowerCase())
+  return authUser && adminFlag
 }
 
 let pulling = false
@@ -154,5 +152,5 @@ async function initAuth() {
 
 export {
   cloudOn, genCode, projPayload, pushProject, schedulePush, pullAll, subscribeRealtime,
-  isAdmin, ADMIN_EMAILS, setAuthUser, syncMyProjects, initAuth, refreshAdminFlag,
+  isAdmin, setAuthUser, syncMyProjects, initAuth, refreshAdminFlag,
 }
