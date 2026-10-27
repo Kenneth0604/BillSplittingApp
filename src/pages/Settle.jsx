@@ -5,6 +5,7 @@ import {
 } from '../lib/calc.js'
 import { Avatar, Card, Empty, Row, SectionTitle, StatCard } from '../components/ui.jsx'
 import PieChart from '../components/PieChart.jsx'
+import TransferRow from '../components/TransferRow.jsx'
 import { useExpenseActions } from '../components/ExpenseRows.jsx'
 
 /** 結算相關操作(記記頁的雙人模式也會用到) */
@@ -12,10 +13,17 @@ export function useSettleActions() {
   const { act, toast } = useApp()
 
   // 標記單筆轉帳已付清:記一筆「清償」抵銷(可在記記列表刪除反悔)
-  function settleTransfer(from, to, amt) {
+  // animate:確認後先播動畫,動畫自己決定什麼時候呼叫 commit 真的記帳
+  function settleTransfer(from, to, amt, animate) {
     const f = memberById(from), b = memberById(to)
     if (!f || !b) return
     if (!confirm(`確認 ${f.name} 已把 ${fmt(amt)} 付給 ${b.name}?\n(會記一筆清償紀錄,反悔可到記記刪除)`)) return
+    const commit = () => commitSettle(from, to, amt, f, b)
+    if (animate) animate(commit)
+    else commit()
+  }
+
+  function commitSettle(from, to, amt, f, b) {
     act((_, p) => {
       p.expenses.push({
         id: p.nextExpenseId++,
@@ -110,28 +118,9 @@ function SplitSettle() {
       ) : (
         <>
           <Card>
-            {plan.map((t, i) => {
-              const f = memberById(t.from), to = memberById(t.to)
-              return (
-                <div key={i} className="flex items-center gap-2 border-b border-line px-4 py-3 last:border-b-0">
-                  <div className="flex w-14 flex-col items-center gap-1">
-                    <Avatar member={f} />
-                    <span className="w-full truncate text-center text-[11px] text-ink">{f?.name || '?'}</span>
-                  </div>
-                  <div className="flex min-w-0 flex-1 flex-col items-center">
-                    <span className="font-bold tabular-nums text-primary">{fmt(t.amt)}</span>
-                    <div className="relative mt-1 h-0.5 w-full rounded bg-primary/60">
-                      <span className="absolute -right-0.5 -top-[5px] border-y-[6px] border-l-[9px] border-y-transparent border-l-primary" />
-                    </div>
-                  </div>
-                  <div className="flex w-14 flex-col items-center gap-1">
-                    <Avatar member={to} />
-                    <span className="w-full truncate text-center text-[11px] text-ink">{to?.name || '?'}</span>
-                  </div>
-                  <button onClick={() => settleTransfer(t.from, t.to, t.amt)} className="chip shrink-0 py-1 text-xs text-success">✓ 已付</button>
-                </div>
-              )
-            })}
+            {plan.map((t, i) => (
+              <TransferRow key={`${t.from}-${t.to}-${t.amt}`} t={t} index={i} onSettle={settleTransfer} />
+            ))}
           </Card>
           <button onClick={() => copySettlement(p)} className="btn-secondary mt-2 w-full">📋 複製結算結果</button>
           {pies}

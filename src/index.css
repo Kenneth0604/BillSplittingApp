@@ -249,3 +249,86 @@ img { max-width: 100%; }
   from { opacity: 1; }
   to { opacity: 0; }
 }
+/* ---- 結算:轉帳列 ---- */
+.transfer-row {
+  animation: transfer-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.transfer-row.is-collapsing {
+  height: 0 !important;
+  opacity: 0;
+  transform: scale(0.97);
+  transition: height 320ms cubic-bezier(0.32, 0.72, 0, 1), opacity 220ms ease, transform 320ms ease;
+}
+@keyframes transfer-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.flow-track {
+  position: relative;
+  width: 100%;
+  height: 10px;
+}
+.flow-line {
+  position: absolute;
+  inset: 4px 6px 4px 0;
+  border-radius: 2px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--t-primary) 25%, transparent), color-mix(in srgb, var(--t-primary) 70%, transparent));
+  transition: background 300ms ease;
+}
+.flow-head {
+  position: absolute;
+  right: 0;
+  top: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 8px solid var(--t-primary);
+  transition: border-left-color 300ms ease;
+}
+.flow-coin {
+  position: absolute;
+  top: 1px;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff6c9, #f5c542 55%, #d99a1a);
+  box-shadow: 0 0 6px rgba(245, 197, 66, 0.6);
+  animation: coin-flow 1.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+@keyframes coin-flow {
+  0% { left: 0; opacity: 0; transform: scale(0.6); }
+  15% { opacity: 1; transform: scale(1); }
+  85% { opacity: 1; transform: scale(1); }
+  100% { left: calc(100% - 14px); opacity: 0; transform: scale(0.6); }
+}
+.flow-track.is-paid .flow-line { background: var(--t-success); }
+.flow-track.is-paid .flow-head { border-left-color: var(--t-success); }
+.flow-track.is-paid .flow-coin { animation: none; opacity: 0; }
+.paid-check circle {
+  fill: var(--t-success);
+  transform-origin: center;
+  animation: check-pop 420ms cubic-bezier(0.2, 0.9, 0.3, 1.35) both;
+}
+.paid-check path {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  animation: check-draw 320ms 160ms ease-out forwards;
+}
+@keyframes check-pop {
+  from { transform: scale(0.3); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@keyframes check-draw {
+  to { stroke-dashoffset: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .transfer-row, .paid-check circle { animation: none; }
+  .flow-coin { animation: none; opacity: 0; }
+  .paid-check path { animation: none; stroke-dashoffset: 0; }
+  .transfer-row.is-collapsing { transition: opacity 150ms ease; transform: none; }
+}
