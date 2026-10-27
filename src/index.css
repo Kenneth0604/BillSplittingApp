@@ -367,3 +367,67 @@ img { max-width: 100%; }
   .cur-opt { transition: opacity 150ms ease; transform: none !important; }
   .cur-rate, .cur-refresh[data-loading] svg { animation: none; }
 }
+
+/* ---------- 掃描電子發票 ---------- */
+.scan-root { position: fixed; inset: 0; z-index: 70; background: #000; overflow: hidden; animation: scan-in 260ms ease-out both; }
+@keyframes scan-in { from { opacity: 0; } }
+.scan-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.scan-frame {
+  --size: min(70vw, 300px); --c: #fff;
+  position: absolute; left: 50%; top: 40%; width: var(--size); height: var(--size); margin: calc(var(--size) / -2) 0 0 calc(var(--size) / -2);
+  border-radius: 28px; box-shadow: 0 0 0 200vmax rgba(0,0,0,0.55);
+}
+.scan-frame i { position: absolute; width: 44px; height: 44px; border: 4px solid var(--c); transition: border-color 220ms ease; animation: scan-breathe 1.8s ease-in-out infinite; }
+.scan-frame i:nth-child(1) { left: -2px; top: -2px; border-right: 0; border-bottom: 0; border-top-left-radius: 28px; --dx: -4px; --dy: -4px; }
+.scan-frame i:nth-child(2) { right: -2px; top: -2px; border-left: 0; border-bottom: 0; border-top-right-radius: 28px; --dx: 4px; --dy: -4px; }
+.scan-frame i:nth-child(3) { left: -2px; bottom: -2px; border-right: 0; border-top: 0; border-bottom-left-radius: 28px; --dx: -4px; --dy: 4px; }
+.scan-frame i:nth-child(4) { right: -2px; bottom: -2px; border-left: 0; border-top: 0; border-bottom-right-radius: 28px; --dx: 4px; --dy: 4px; }
+@keyframes scan-breathe { 50% { translate: var(--dx) var(--dy); } }
+.scan-frame[data-state="found"] i { border-color: #34c759; animation: none; }
+.scan-frame[data-state="found"] { box-shadow: 0 0 0 200vmax rgba(0,0,0,0.65), 0 0 40px rgba(52,199,89,0.55) inset; }
+.scan-line {
+  position: absolute; left: 10%; right: 10%; height: 2px; top: 10%; border-radius: 2px;
+  background: linear-gradient(90deg, transparent, #fff, transparent);
+  box-shadow: 0 0 12px 2px rgba(255,255,255,0.6);
+  animation: scan-sweep 2.2s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
+}
+@keyframes scan-sweep { to { top: 90%; } }
+.scan-top { position: absolute; left: 0; right: 0; top: 0; display: flex; align-items: center; justify-content: space-between; padding-left: 16px; padding-right: 16px; }
+.scan-top > * { margin-top: 12px; }
+.scan-close {
+  display: grid; place-items: center; width: 36px; height: 36px; border-radius: 999px; color: #fff;
+  background: rgba(255,255,255,0.18); -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
+}
+.scan-close:active { transform: scale(0.92); }
+.scan-title { color: #fff; font-weight: 600; font-size: 17px; letter-spacing: -0.01em; }
+.scan-tip {
+  position: absolute; left: 50%; top: calc(40% + min(35vw, 150px) + 24px); translate: -50% 0; white-space: nowrap;
+  padding: 8px 16px; border-radius: 999px; color: #fff; font-size: 14px; font-weight: 500;
+  background: rgba(0,0,0,0.35); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+  transition: background 200ms ease;
+}
+.scan-tip[data-hint] { background: rgba(255,159,10,0.85); animation: scan-shake 380ms ease; }
+@keyframes scan-shake { 25% { transform: translateX(-6px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-3px); } }
+.scan-photo {
+  position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 36px); translate: -50% 0;
+  padding: 12px 20px; border-radius: 999px; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer;
+  background: rgba(255,255,255,0.18); -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
+}
+.scan-photo:active { transform: scale(0.96); }
+.scan-result {
+  position: absolute; left: 8px; right: 8px; bottom: 8px; max-width: 440px; margin: 0 auto; padding: 20px 20px 16px;
+  border-radius: 28px; background: var(--t-bg); box-shadow: 0 -10px 40px rgba(0,0,0,0.35);
+}
+.scan-items { margin-top: 10px; border-top: 0.5px solid var(--t-line); padding-top: 8px; font-size: 13px; }
+.scan-items li { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; color: var(--t-ink); animation: scan-item 360ms cubic-bezier(0.2, 0.9, 0.3, 1.1) both; animation-delay: calc(120ms + var(--i, 0) * 50ms); }
+@keyframes scan-item { from { opacity: 0; transform: translateY(6px); } }
+.scan-btn {
+  display: flex; width: 100%; align-items: center; justify-content: center; gap: 8px; margin-bottom: 20px; padding: 12px; border-radius: 14px;
+  font-size: 15px; font-weight: 600; color: var(--t-primary);
+  background: color-mix(in srgb, var(--t-primary) 10%, transparent); border: 1px dashed color-mix(in srgb, var(--t-primary) 45%, transparent);
+  transition: transform 150ms ease; -webkit-tap-highlight-color: transparent;
+}
+.scan-btn:active { transform: scale(0.97); }
+@media (prefers-reduced-motion: reduce) {
+  .scan-frame i, .scan-line, .scan-tip[data-hint], .scan-items li { animation: none; }
+}

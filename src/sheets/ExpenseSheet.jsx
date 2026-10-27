@@ -8,6 +8,8 @@ import { getCats } from '../lib/store.js'
 import { chatName } from '../lib/nick.js'
 import { useExpenseActions } from '../components/ExpenseRows.jsx'
 import CurrencyField from '../components/CurrencyField.jsx'
+import InvoiceScanner from '../components/InvoiceScanner.jsx'
+import { invoiceDesc } from '../lib/invoice.js'
 import { BASE, CUR_BY_CODE, fmtCur, toBase } from '../lib/fx.js'
 
 /**
@@ -58,6 +60,8 @@ export default function ExpenseSheet({ editId = null }) {
   const [cands, setCands] = useState(() => p.members.map((m) => m.id))
   const [drawN, setDrawN] = useState('1')
   const [revealNow, setRevealNow] = useState('now')
+  const [scan, setScan] = useState(false)
+  const [inv, setInv] = useState(editing?.inv ?? null) // 發票號碼,避免同一張重複記
 
   // 標題
   const title = editing
@@ -144,6 +148,8 @@ export default function ExpenseSheet({ editId = null }) {
     const common = { cat: effectiveCat, desc: desc.trim(), date: dateMD() }
     if (foreign && !(rateNum > 0)) return toast.error('請輸入有效匯率')
     const origAmt = evalAmt(amount)
+    if (inv && !editing && p.expenses.some((x) => x.inv === inv)) return toast.error(`發票 ${inv} 已經記過了`)
+    if (inv) common.inv = inv
     const fx = foreign ? { cur, rate: rateNum, orig: Math.round(origAmt * 100) / 100 } : undefined
 
     // 👥 雙人直記欠帳
@@ -223,6 +229,26 @@ export default function ExpenseSheet({ editId = null }) {
   )
   const DescField = <Field label="詳細說明(選填)"><input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="例如:鐵板燒" className="input" /></Field>
   const DateField = <Field label="日期"><input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input" /></Field>
+  // 掃發票:帶入金額、日期、說明(說明有填就不蓋掉),幣別切回台幣
+  function applyInvoice(r) {
+    setScan(false)
+    if (!editing && p.expenses.some((x) => x.inv === r.number)) toast.error(`發票 ${r.number} 已經記過了`)
+    setInv(r.number)
+    setCur(BASE); setRate(null)
+    setAmount(String(r.total))
+    setDate(r.date)
+    if (!desc.trim()) setDesc(invoiceDesc(r))
+    toast.success(`已帶入 ${fmt(r.total)} ✓`)
+  }
+  const ScanBtn = (
+    <>
+      <button type="button" className="scan-btn" onClick={() => setScan(true)}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3" /><path d="M8 9h2v2H8zM14 9h2v2h-2zM8 14h2v1M13 13h3v3h-3z" /></svg>
+        {inv ? `已帶入發票 ${inv} · 重新掃描` : '掃電子發票,自動帶入金額'}
+      </button>
+      {scan && <InvoiceScanner onResult={applyInvoice} onClose={() => setScan(false)} />}
+    </>
+  )
   const CurField = <CurrencyField keepRate={Boolean(fx0)} cur={cur} rate={rate} preview={previewNT != null && Number.isFinite(previewNT) ? previewNT : null} onChange={(c, r) => { setCur(c); setRate(r) }} />
   const PayerField = (label = '誰先付的?') => <Field label={label}><Select value={payer} onChange={setPayer} options={memberOpts} /></Field>
 
@@ -231,7 +257,7 @@ export default function ExpenseSheet({ editId = null }) {
     return (
       <form onSubmit={submit}>
         {CatField}{DescField}{DateField}{PayerField()}
-        {CurField}
+        {ScanBtn}{CurField}
         <Field label={amtLabel('= 對方欠的錢')}><AmountInput value={amount} onChange={setAmount} /></Field>
         <button type="submit" className="btn-primary w-full">{editing ? '更新' : '記一筆'}</button>
       </form>
@@ -251,7 +277,7 @@ export default function ExpenseSheet({ editId = null }) {
         </Field>
         {isFund && kind === 'in' && PayerField('誰存入?')}
         {CatField}{DescField}{DateField}
-        {CurField}
+        {ScanBtn}{CurField}
         <Field label={amtLabel()}><AmountInput value={amount} onChange={setAmount} /></Field>
         <button type="submit" className="btn-primary w-full">{editing ? '更新' : '記一筆'}</button>
       </form>
@@ -299,7 +325,7 @@ export default function ExpenseSheet({ editId = null }) {
 
       {mode === 'equal' && (
         <>
-          {CurField}
+          {ScanBtn}{CurField}
           <Field label={amtLabel()}><AmountInput value={amount} onChange={setAmount} /></Field>
           {PayerField()}
           <Field label="誰要分攤?(均分)">
@@ -324,7 +350,7 @@ export default function ExpenseSheet({ editId = null }) {
         </>
       ) : (
         <>
-          {CurField}
+          {ScanBtn}{CurField}
           <Field label={amtLabel()}><AmountInput value={amount} onChange={setAmount} /></Field>
           {PayerField()}
           <Field label="誰參加抽籤?(抽中的人買單)">
