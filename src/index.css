@@ -332,3 +332,38 @@ img { max-width: 100%; }
   .paid-check path { animation: none; stroke-dashoffset: 0; }
   .transfer-row.is-collapsing { transition: opacity 150ms ease; transform: none; }
 }
+
+/* ---------- 多幣別 ---------- */
+.cur-pill {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 14px;
+  background: var(--t-surface); border: 0.5px solid var(--t-line); color: var(--t-ink);
+  -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
+  transition: transform 160ms ease, box-shadow 200ms ease; -webkit-tap-highlight-color: transparent;
+}
+.cur-pill:active { transform: scale(0.96); }
+.cur-pill[data-open] { box-shadow: 0 0 0 3px color-mix(in srgb, var(--t-primary) 22%, transparent); }
+.cur-chevron { color: var(--t-muted); transition: transform 320ms cubic-bezier(0.3, 1.4, 0.4, 1); }
+.cur-pill[data-open] .cur-chevron { transform: rotate(180deg); }
+.cur-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; padding-top: 4px; }
+.cur-opt {
+  display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 0; border-radius: 14px;
+  background: var(--t-surface); border: 0.5px solid var(--t-line); color: var(--t-ink);
+  opacity: 0; transform: translateY(8px) scale(0.85);
+  transition: opacity 240ms ease, transform 460ms cubic-bezier(0.3, 1.5, 0.4, 1), background 160ms ease;
+  transition-delay: calc(var(--i) * 18ms);
+  -webkit-tap-highlight-color: transparent;
+}
+.cur-expand[data-open] .cur-opt { opacity: 1; transform: none; }
+.cur-opt:active { transform: scale(0.92); }
+.cur-opt[data-on] { background: var(--t-primary); color: var(--t-primary-fg, #fff); border-color: transparent; box-shadow: 0 4px 12px color-mix(in srgb, var(--t-primary) 35%, transparent); }
+.cur-rate { padding: 10px 12px; margin-top: 2px; animation: cur-rate-in 380ms cubic-bezier(0.2, 0.9, 0.3, 1.1) both; }
+@keyframes cur-rate-in { from { opacity: 0; transform: translateY(-6px) scale(0.98); } }
+.cur-refresh { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 999px; color: var(--t-primary); -webkit-tap-highlight-color: transparent; }
+.cur-refresh:active { background: color-mix(in srgb, var(--t-primary) 12%, transparent); }
+.cur-refresh[data-loading] svg { animation: cur-spin 700ms linear infinite; }
+@keyframes cur-spin { to { transform: rotate(360deg); } }
+.fx-sub { display: block; font-size: 11px; font-weight: 500; color: var(--t-muted); }
+@media (prefers-reduced-motion: reduce) {
+  .cur-opt { transition: opacity 150ms ease; transform: none !important; }
+  .cur-rate, .cur-refresh[data-loading] svg { animation: none; }
+}

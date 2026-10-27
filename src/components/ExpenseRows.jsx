@@ -1,3 +1,4 @@
+import { CUR_BY_CODE, fmtCur } from '../lib/fx.js'
 import { useApp } from '../lib/app.jsx'
 import { useSheet } from './Sheet.jsx'
 import { Avatar, IconBtn, Row } from './ui.jsx'
@@ -61,7 +62,7 @@ export function ExpenseRow({ e }) {
       avatar={<Avatar member={memberById(avatarId)} />}
       title={e.desc || e.cat || '未命名支出'}
       detail={`${e.desc && e.cat ? e.cat + ' · ' : ''}${payText} · ${splitText} · ${e.date}${e.by ? ` · ${e.by} 記` : ''}`}
-      amount={fmt(e.amount)}
+      amount={<WithFx e={e}>{fmt(e.amount)}</WithFx>}
       actions={
         <>
           {e.mode === 'random' && !e.revealed && <IconBtn tone="warning" onClick={() => reveal(e.id)} title="開獎">🎲</IconBtn>}
@@ -70,6 +71,18 @@ export function ExpenseRow({ e }) {
         </>
       }
     />
+  )
+}
+
+// 外幣紀錄:NT$ 下面加一行原幣金額
+function WithFx({ e, children }) {
+  if (!e.fx) return children
+  const c = CUR_BY_CODE[e.fx.cur]
+  return (
+    <>
+      {children}
+      <span className="fx-sub">{c?.flag} {fmtCur(e.fx.orig, e.fx.cur)}</span>
+    </>
   )
 }
 
@@ -91,7 +104,7 @@ export function LedgerRow({ e, isFund }) {
       avatar={avatar}
       title={e.desc || e.cat || (isIn ? '收入' : '支出')}
       detail={detail}
-      amount={`${isIn ? '+' : '−'}${fmt(e.amount)}`}
+      amount={<WithFx e={e}>{`${isIn ? '+' : '−'}${fmt(e.amount)}`}</WithFx>}
       amountClass={isIn ? 'amount-pos' : 'amount-neg'}
       actions={
         <>

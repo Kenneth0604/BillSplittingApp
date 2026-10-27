@@ -7,6 +7,8 @@ import { dateToISO, evalAmt, fmt, isValidAmount, isoToMD, losersOf, memberById, 
 import { getCats } from '../lib/store.js'
 import { chatName } from '../lib/nick.js'
 import { useExpenseActions } from '../components/ExpenseRows.jsx'
+import CurrencyField from '../components/CurrencyField.jsx'
+import { BASE, CUR_BY_CODE, fmtCur, toBase } from '../lib/fx.js'
 
 /**
  * 新增 / 編輯一筆紀錄
@@ -33,15 +35,21 @@ export default function ExpenseSheet({ editId = null }) {
   const [date, setDate] = useState(() => (editing ? dateToISO(editing.date) : todayISO()))
   const [mode, setMode] = useState(lockedMode ?? 'exact')
   const [kind, setKind] = useState(editing?.kind === 'out' ? 'out' : 'in')
-  const [amount, setAmount] = useState(editing ? String(editing.amount) : '')
+  // 多幣別:外幣時輸入的都是原幣,存檔才換算成 NT$;原幣金額另存在 fx
+  const fx0 = editing?.fx
+  const [cur, setCur] = useState(() => fx0?.cur || (editing ? BASE : p.lastCur || BASE))
+  const [rate, setRate] = useState(() => (fx0 ? String(fx0.rate) : null))
+  const foreign = cur !== BASE
+  const [amount, setAmount] = useState(editing ? String(fx0 ? fx0.orig : editing.amount) : '')
   const [payer, setPayer] = useState(() => String(editing?.payer || p.members[0]?.id || ''))
   const [splitters, setSplitters] = useState(() => (editing?.splitters?.length ? editing.splitters : p.members.map((m) => m.id)))
   const [cells, setCells] = useState(() => {
     const c = {}
     if (editing?.mode === 'exact') {
+      const paid = fx0?.paid || editing.paid, spent = fx0?.spent || editing.spent
       p.members.forEach((m) => {
-        if (editing.paid?.[m.id]) c['pay_' + m.id] = String(editing.paid[m.id])
-        if (editing.spent?.[m.id]) c['spend_' + m.id] = String(editing.spent[m.id])
+        if (paid?.[m.id]) c['pay_' + m.id] = String(paid[m.id])
+        if (spent?.[m.id]) c['spend_' + m.id] = String(spent[m.id])
       })
     }
     return c
@@ -83,9 +91,18 @@ export default function ExpenseSheet({ editId = null }) {
   const memberOpts = p.members.map((m) => ({ value: String(m.id), label: m.name }))
   const dateMD = () => isoToMD(date) || today()
 
+  const curInfo = CUR_BY_CODE[cur] || CUR_BY_CODE[BASE]
+  const amtLabel = (extra = '') => `金額 (${curInfo.symbol})${extra}`
+  const show = (n) => (foreign ? fmtCur(n, cur) : fmt(n))
+  const rateNum = Number(rate)
+  // 原幣 → NT$(整數);NT$ 時就是四捨五入
+  const conv = (v) => (foreign ? toBase(v, rateNum) : Math.round(v))
+  const previewNT = foreign ? conv(evalAmt(amount)) : null
+
   /** 新增或更新一筆紀錄 */
   function commit(rec) {
     act((_, pr) => {
+      pr.lastCur = cur
       if (editing) {
         const i = pr.expenses.findIndex((x) => x.id === editing.id)
         if (i >= 0) pr.expenses[i] = { ...pr.expenses[i], ...rec, id: pr.expenses[i].id }
@@ -125,42 +142,55 @@ export default function ExpenseSheet({ editId = null }) {
   function submit(e) {
     e?.preventDefault()
     const common = { cat: effectiveCat, desc: desc.trim(), date: dateMD() }
+    if (foreign && !(rateNum > 0)) return toast.error('請輸入有效匯率')
+    const origAmt = evalAmt(amount)
+    const fx = foreign ? { cur, rate: rateNum, orig: Math.round(origAmt * 100) / 100 } : undefined
 
     // 👥 雙人直記欠帳
     if (duoSimple) {
-      const amt = Math.round(evalAmt(amount))
+      const amt = conv(origAmt)
       const pid = +payer
       const other = p.members.find((m) => m.id !== pid)
       if (!isValidAmount(amt)) return toast.error('請輸入有效金額')
       if (!other) return toast.error('找不到對方成員')
-      return commit({ ...common, amount: amt, mode: 'exact', duo: true, paid: { [pid]: amt }, spent: { [other.id]: amt }, payer: pid, splitters: [] })
+      return commit({ ...common, fx, amount: amt, mode: 'exact', duo: true, paid: { [pid]: amt }, spent: { [other.id]: amt }, payer: pid, splitters: [] })
     }
 
     if (!isSplit) {
-      const amt = Math.round(evalAmt(amount))
+      const amt = conv(origAmt)
       if (!isValidAmount(amt)) return toast.error('請輸入有效金額')
       const pid = isFund && kind === 'in' ? +payer : 0
-      return commit({ ...common, amount: amt, kind, payer: pid, splitters: [] })
+      return commit({ ...common, fx, amount: amt, kind, payer: pid, splitters: [] })
     }
 
     if (mode === 'exact') {
+      // 先用原幣檢查合計,再換算;換算的四捨五入差額補到支出最多的人身上,確保兩邊相等
+      const oPaid = {}, oSpent = {}
+      let otp = 0, ots = 0
+      p.members.forEach((m) => {
+        const pv = foreign ? evalAmt(cells['pay_' + m.id]) || 0 : Math.round(evalAmt(cells['pay_' + m.id]) || 0)
+        const sv = foreign ? evalAmt(cells['spend_' + m.id]) || 0 : Math.round(evalAmt(cells['spend_' + m.id]) || 0)
+        if (pv > 0) { oPaid[m.id] = pv; otp += pv }
+        if (sv > 0) { oSpent[m.id] = sv; ots += sv }
+      })
+      if (otp <= 0) return toast.error('請輸入先付金額')
+      if (Math.abs(otp - ots) > 0.01) return toast.error(`先付合計 ${show(otp)} ≠ 支出合計 ${show(ots)}`)
       const paid = {}, spent = {}
       let tp = 0, ts = 0
-      p.members.forEach((m) => {
-        const pv = Math.round(evalAmt(cells['pay_' + m.id]) || 0)
-        const sv = Math.round(evalAmt(cells['spend_' + m.id]) || 0)
-        if (pv > 0) { paid[m.id] = pv; tp += pv }
-        if (sv > 0) { spent[m.id] = sv; ts += sv }
-      })
-      if (tp <= 0) return toast.error('請輸入先付金額')
-      if (Math.abs(tp - ts) > 0.01) return toast.error(`先付合計 ${fmt(tp)} ≠ 支出合計 ${fmt(ts)}`)
-      return commit({ ...common, amount: tp, mode: 'exact', paid, spent, payer: 0, splitters: [] })
+      for (const [id, v] of Object.entries(oPaid)) { paid[id] = conv(v); tp += paid[id] }
+      for (const [id, v] of Object.entries(oSpent)) { spent[id] = conv(v); ts += spent[id] }
+      if (tp !== ts) {
+        const top = Object.keys(spent).sort((a, b) => spent[b] - spent[a])[0]
+        spent[top] += tp - ts
+      }
+      const efx = foreign ? { ...fx, orig: Math.round(otp * 100) / 100, paid: oPaid, spent: oSpent } : undefined
+      return commit({ ...common, fx: efx, amount: tp, mode: 'exact', paid, spent, payer: 0, splitters: [] })
     }
 
     if (mode === 'random') {
-      const amt = Math.round(evalAmt(amount))
+      const amt = conv(origAmt)
       if (!isValidAmount(amt)) return toast.error('請輸入有效金額')
-      if (editing) return commit({ ...common, amount: amt }) // 不重抽
+      if (editing) return commit({ ...common, fx, amount: amt }) // 不重抽
       const n = +drawN || 1
       if (cands.length < 2) return toast.error('至少選 2 位參加抽籤')
       if (n >= cands.length) return toast.error('抽的人數要少於參加人數')
@@ -169,7 +199,8 @@ export default function ExpenseSheet({ editId = null }) {
       const losers = pool.slice(0, n)
       const now = revealNow === 'now'
       act((_, pr) => {
-        pr.expenses.push({ id: pr.nextExpenseId++, ...common, amount: amt, mode: 'random', payer: +payer, candidates: cands, losers, loser: losers[0], revealed: now, splitters: [], by: chatName() || undefined })
+        pr.lastCur = cur
+        pr.expenses.push({ id: pr.nextExpenseId++, ...common, fx, amount: amt, mode: 'random', payer: +payer, candidates: cands, losers, loser: losers[0], revealed: now, splitters: [], by: chatName() || undefined })
       })
       close()
       const names = losers.map((id) => memberById(id)?.name || '?').join('、')
@@ -177,12 +208,12 @@ export default function ExpenseSheet({ editId = null }) {
     }
 
     // equal
-    const amt = Math.round(evalAmt(amount))
+    const amt = conv(origAmt)
     let sp = splitters
     if (!sp.length && duo) sp = p.members.map((m) => m.id)
     if (!isValidAmount(amt)) return toast.error('請輸入有效金額')
     if (!sp.length) return toast.error('至少選一位分攤者')
-    commit({ ...common, amount: amt, payer: +payer, splitters: sp })
+    commit({ ...common, fx, amount: amt, payer: +payer, splitters: sp })
   }
 
   const CatField = (
@@ -192,6 +223,7 @@ export default function ExpenseSheet({ editId = null }) {
   )
   const DescField = <Field label="詳細說明(選填)"><input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="例如:鐵板燒" className="input" /></Field>
   const DateField = <Field label="日期"><input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input" /></Field>
+  const CurField = <CurrencyField keepRate={Boolean(fx0)} cur={cur} rate={rate} preview={previewNT != null && Number.isFinite(previewNT) ? previewNT : null} onChange={(c, r) => { setCur(c); setRate(r) }} />
   const PayerField = (label = '誰先付的?') => <Field label={label}><Select value={payer} onChange={setPayer} options={memberOpts} /></Field>
 
   // ---------- 雙人精簡 ----------
@@ -199,7 +231,8 @@ export default function ExpenseSheet({ editId = null }) {
     return (
       <form onSubmit={submit}>
         {CatField}{DescField}{DateField}{PayerField()}
-        <Field label="金額 (NT$)= 對方欠的錢"><AmountInput value={amount} onChange={setAmount} /></Field>
+        {CurField}
+        <Field label={amtLabel('= 對方欠的錢')}><AmountInput value={amount} onChange={setAmount} /></Field>
         <button type="submit" className="btn-primary w-full">{editing ? '更新' : '記一筆'}</button>
       </form>
     )
@@ -218,7 +251,8 @@ export default function ExpenseSheet({ editId = null }) {
         </Field>
         {isFund && kind === 'in' && PayerField('誰存入?')}
         {CatField}{DescField}{DateField}
-        <Field label="金額 (NT$)"><AmountInput value={amount} onChange={setAmount} /></Field>
+        {CurField}
+        <Field label={amtLabel()}><AmountInput value={amount} onChange={setAmount} /></Field>
         <button type="submit" className="btn-primary w-full">{editing ? '更新' : '記一筆'}</button>
       </form>
     )
@@ -240,6 +274,7 @@ export default function ExpenseSheet({ editId = null }) {
 
       {mode === 'exact' && (
         <>
+          {CurField}
           <Field label="輸入各自的先付與支出">
             <Card>
               <div className="grid grid-cols-[1fr_5rem_5rem] items-center gap-2 border-b border-line px-3 py-2 text-xs font-semibold text-muted">
@@ -253,7 +288,7 @@ export default function ExpenseSheet({ editId = null }) {
                 </div>
               ))}
             </Card>
-            <p className={`mt-1.5 text-xs font-medium ${sumCls}`}>先付合計 {fmt(tp)}｜支出合計 {fmt(ts)}</p>
+            <p className={`mt-1.5 text-xs font-medium ${sumCls}`}>先付合計 {show(tp)}｜支出合計 {show(ts)}{foreign && tp > 0 ? `(≈ ${fmt(conv(tp))})` : ''}</p>
           </Field>
           <Field label="或:選擇誰要均分支出,一鍵填入">
             <Chips multi options={memberOpts.map((o) => ({ value: +o.value, label: o.label }))} value={eqSel} onChange={setEqSel} />
@@ -264,7 +299,8 @@ export default function ExpenseSheet({ editId = null }) {
 
       {mode === 'equal' && (
         <>
-          <Field label="金額 (NT$)"><AmountInput value={amount} onChange={setAmount} /></Field>
+          {CurField}
+          <Field label={amtLabel()}><AmountInput value={amount} onChange={setAmount} /></Field>
           {PayerField()}
           <Field label="誰要分攤?(均分)">
             <Chips multi options={memberOpts.map((o) => ({ value: +o.value, label: o.label }))} value={splitters} onChange={setSplitters} />
@@ -283,11 +319,13 @@ export default function ExpenseSheet({ editId = null }) {
             <div className="mt-1 text-muted">{memberById(editing.payer)?.name || '?'} 先付 {fmt(editing.amount)} · {editing.date}</div>
           </Card>
           {!editing.revealed && <button type="button" onClick={() => { close(); reveal(editing.id) }} className="btn-secondary mb-4 w-full">🎲 立刻開獎</button>}
-          <Field label="金額 (NT$)" hint="名單與結果不會因編輯改變(要重抽請刪除後重記)"><AmountInput value={amount} onChange={setAmount} /></Field>
+          {CurField}
+          <Field label={amtLabel()} hint="名單與結果不會因編輯改變(要重抽請刪除後重記)"><AmountInput value={amount} onChange={setAmount} /></Field>
         </>
       ) : (
         <>
-          <Field label="金額 (NT$)"><AmountInput value={amount} onChange={setAmount} /></Field>
+          {CurField}
+          <Field label={amtLabel()}><AmountInput value={amount} onChange={setAmount} /></Field>
           {PayerField()}
           <Field label="誰參加抽籤?(抽中的人買單)">
             <Chips multi options={memberOpts.map((o) => ({ value: +o.value, label: o.label }))} value={cands} onChange={setCands} />
