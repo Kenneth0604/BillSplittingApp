@@ -30,8 +30,18 @@ jobs:
       - name: Test
         run: npm test
 
+      # Supabase 設定在 build 時寫進前端;少了它登入畫面會顯示「需要先設定 Supabase 雲端」。
+      # 優先用 VITE_SUPABASE_* secrets,沒有就用 keep-alive 已在用的 SUPABASE_KEY(publishable key)。
       - name: Build
-        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://bklyaejmluevxqufbkma.supabase.co' }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || secrets.SUPABASE_KEY }}
+        run: |
+          if [ -z "$VITE_SUPABASE_ANON_KEY" ]; then
+            echo "::error::缺少 Supabase key:請在 repo Settings → Secrets → Actions 新增 VITE_SUPABASE_ANON_KEY"
+            exit 1
+          fi
+          npm run build
 
       - uses: actions/configure-pages@v5
 
