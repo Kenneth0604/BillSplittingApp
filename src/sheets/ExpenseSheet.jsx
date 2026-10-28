@@ -39,7 +39,8 @@ export default function ExpenseSheet({ editId = null }) {
   const [kind, setKind] = useState(editing?.kind === 'out' ? 'out' : 'in')
   // 多幣別:外幣時輸入的都是原幣,存檔才換算成 NT$;原幣金額另存在 fx
   const fx0 = editing?.fx
-  const [cur, setCur] = useState(() => fx0?.cur || (editing ? BASE : p.lastCur || BASE))
+  // 新增時一律預設新台幣;只有編輯外幣紀錄時才沿用原本的幣別
+  const [cur, setCur] = useState(() => fx0?.cur || BASE)
   const [rate, setRate] = useState(() => (fx0 ? String(fx0.rate) : null))
   const foreign = cur !== BASE
   const [amount, setAmount] = useState(editing ? String(fx0 ? fx0.orig : editing.amount) : '')
@@ -106,7 +107,6 @@ export default function ExpenseSheet({ editId = null }) {
   /** 新增或更新一筆紀錄 */
   function commit(rec) {
     act((_, pr) => {
-      pr.lastCur = cur
       if (editing) {
         const i = pr.expenses.findIndex((x) => x.id === editing.id)
         if (i >= 0) pr.expenses[i] = { ...pr.expenses[i], ...rec, id: pr.expenses[i].id }
@@ -205,8 +205,7 @@ export default function ExpenseSheet({ editId = null }) {
       const losers = pool.slice(0, n)
       const now = revealNow === 'now'
       act((_, pr) => {
-        pr.lastCur = cur
-        pr.expenses.push({ id: pr.nextExpenseId++, ...common, fx, amount: amt, mode: 'random', payer: +payer, candidates: cands, losers, loser: losers[0], revealed: now, splitters: [], by: chatName() || undefined })
+          pr.expenses.push({ id: pr.nextExpenseId++, ...common, fx, amount: amt, mode: 'random', payer: +payer, candidates: cands, losers, loser: losers[0], revealed: now, splitters: [], by: chatName() || undefined })
       })
       close()
       const names = losers.map((id) => memberById(id)?.name || '?').join('、')
