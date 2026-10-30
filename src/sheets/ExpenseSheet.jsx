@@ -10,7 +10,7 @@ import { useExpenseActions } from '../components/ExpenseRows.jsx'
 import CurrencyField from '../components/CurrencyField.jsx'
 import InvoiceScanner from '../components/InvoiceScanner.jsx'
 import { invoiceDesc } from '../lib/invoice.js'
-import { BASE, CUR_BY_CODE, fmtCur, toBase } from '../lib/fx.js'
+import { BASE, CUR_BY_CODE, cachedRates, fmtCur, fmtRate, rateOf, toBase } from '../lib/fx.js'
 
 /**
  * 新增 / 編輯一筆紀錄
@@ -39,9 +39,10 @@ export default function ExpenseSheet({ editId = null }) {
   const [kind, setKind] = useState(editing?.kind === 'out' ? 'out' : 'in')
   // 多幣別:外幣時輸入的都是原幣,存檔才換算成 NT$;原幣金額另存在 fx
   const fx0 = editing?.fx
-  // 新增時一律預設新台幣;只有編輯外幣紀錄時才沿用原本的幣別
-  const [cur, setCur] = useState(() => fx0?.cur || BASE)
-  const [rate, setRate] = useState(() => (fx0 ? String(fx0.rate) : null))
+  // 新增時沿用這個帳本上一筆新增用的幣別(出國記帳不用每筆重選),從沒選過就是新台幣;
+  // 編輯時用該筆紀錄自己的幣別
+  const [cur, setCur] = useState(() => fx0?.cur || (!editing && CUR_BY_CODE[p.lastCur] ? p.lastCur : BASE))
+  const [rate, setRate] = useState(() => (fx0 ? String(fx0.rate) : cur !== BASE ? fmtRate(rateOf(cur, cachedRates())) : null))
   const foreign = cur !== BASE
   const [amount, setAmount] = useState(editing ? String(fx0 ? fx0.orig : editing.amount) : '')
   const [payer, setPayer] = useState(() => String(editing?.payer || p.members[0]?.id || ''))
@@ -112,6 +113,7 @@ export default function ExpenseSheet({ editId = null }) {
         if (i >= 0) pr.expenses[i] = { ...pr.expenses[i], ...rec, id: pr.expenses[i].id }
       } else {
         rec.id = pr.nextExpenseId++
+        pr.lastCur = cur
         const who = chatName()
         if (who) rec.by = who
         pr.expenses.push(rec)
@@ -205,7 +207,8 @@ export default function ExpenseSheet({ editId = null }) {
       const losers = pool.slice(0, n)
       const now = revealNow === 'now'
       act((_, pr) => {
-          pr.expenses.push({ id: pr.nextExpenseId++, ...common, fx, amount: amt, mode: 'random', payer: +payer, candidates: cands, losers, loser: losers[0], revealed: now, splitters: [], by: chatName() || undefined })
+        pr.lastCur = cur
+        pr.expenses.push({ id: pr.nextExpenseId++, ...common, fx, amount: amt, mode: 'random', payer: +payer, candidates: cands, losers, loser: losers[0], revealed: now, splitters: [], by: chatName() || undefined })
       })
       close()
       const names = losers.map((id) => memberById(id)?.name || '?').join('、')
