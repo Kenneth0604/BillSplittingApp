@@ -22,7 +22,7 @@ index.html ─ src/main.jsx(載入資料、註冊 Service Worker、掛 Provider)
                  ├─ components/       Layout(頂欄 + 分頁)、Sheet(底部表單)、ui(卡片 / 列 / chips / 頭貼)、
                  │                    AmountInput、PieChart、Chat、ExpenseRows
                  ├─ pages/            Expenses(記記)、Members(自訂)、Settle(結算 / 基金狀況 / 統計)
-                 └─ sheets/           ExpenseSheet、ProjectSheet、DateSheet、AuthSheet、ProfileSheet、
+                 └─ sheets/           ExpenseSheet、ProjectSheet、AuthSheet、ProfileSheet、
                                       MemberSheets、CatSheets、AdminSheets、ShareCodeSheet
 src/sw.js                             Service Worker(建置時輸出成 /BillSplittingApp/sw.js)
 public/manifest.json、icons/          PWA
@@ -113,14 +113,14 @@ legacy/                               舊版(單一 HTML + 原生 ES Modules)原
 |---|---|
 | 切換 / 新建專案 | 左上角 📁 專案名稱 → 選專案,或填名稱 + 選類型建立 |
 | 退出專案 | 專案面板 ✕:雲端專案 = 退出成員(可用代碡再加入);純本機專案 = 永久刪除 |
-| 記一筆帳 | 記記頁右下 ＋ → 分類 → 說明(選填)→ 日期 → 分帳方式 → 金額(可打算式如 `670/3`) |
+| 記一筆帳 | 記記頁先在日期區選好哪一天 → 右下 ＋ → 分類 → 說明(選填)→ 分帳方式 → 金額(可打算式如 `670/3`)→ 備註(選填)。新增一律新台幣;日期與舊外幣紀錄的幣別只在編輯時可改 |
 | 特定付款 | 表格中填各人「先付 / 支出」,兩邊合計相等才能送出;也可勾人後「把先付合計均分到支出」 |
 | 均分 | 切「均分」→ 金額 → 誰先付、誰分攤 |
 | 隨機付款 | 切「🎲 隨機付款」→ 選參加抽籤的人與抽幾人 → 「立刻公布」或「結帳時公布」 |
 | 開獎 | 結算頁「🎲 未開獎」按「開獎」,或記記列表該筆的 🎲 |
 | 編輯 / 刪除 | 每一列的 ✎ / ✕;編輯時分帳方式鎖定,隨機付款只能改金額等欄位不重抽 |
 | 看誰欠誰 | 結算頁:最少轉帳方案(每筆可按「已付」記清償)+ 三張圓餅圖 |
-| 依日期查看 | 頂欄 📅 |
+| 依日期查看 | 記記頁的日期區:‹ › 換週、點日期切換、點月份標題跳到任一天;列表只顯示選中那天 |
 | 管理成員 / 分類 | 自訂頁:成員(可改名、換頭貼)、分類(點一下改名,會同步更新既有帳目) |
 | 留言 | 記記頁底部留言區,暱稱欄每個專案可填不同的 |
 | 上雲分享 | 先登入 → 專案面板 → 專案旁 ☁ → 顯示 6 碼代碼並可複製 |

@@ -62,7 +62,7 @@ export function ExpenseRow({ e }) {
       avatar={<Avatar member={memberById(avatarId)} />}
       title={e.desc || e.cat || '未命名支出'}
       note={e.note}
-      detail={`${e.desc && e.cat ? e.cat + ' · ' : ''}${payText} · ${splitText} · ${e.date}${e.by ? ` · ${e.by} 記` : ''}`}
+      detail={`${e.desc && e.cat ? e.cat + ' · ' : ''}${payText} · ${splitText}${e.by ? ` · ${e.by} 記` : ''}`}
       amount={<WithFx e={e}>{fmt(e.amount)}</WithFx>}
       actions={
         <>
@@ -91,15 +91,16 @@ function WithFx({ e, children }) {
 export function LedgerRow({ e, isFund }) {
   const { edit, remove } = useExpenseActions()
   const isIn = e.kind === 'in'
-  let detail = e.date
+  // 列表已依日期分組,不再重複顯示日期
+  let detail = ''
   let avatar = <Avatar color={isIn ? 'var(--t-success)' : 'var(--t-danger)'} text={isIn ? '＋' : '－'} />
   if (isFund && isIn) {
     const m = memberById(e.payer)
     avatar = <Avatar member={m} color={colorOf(e.payer)} text={initials(m?.name || '?')} />
-    detail = `${m?.name || '?'} 存入 · ${e.date}`
+    detail = `${m?.name || '?'} 存入`
   }
-  if (e.desc && e.cat) detail = `${e.cat} · ${detail}`
-  if (e.by) detail += ` · ${e.by} 記`
+  const parts = [e.desc && e.cat ? e.cat : '', detail, e.by ? `${e.by} 記` : ''].filter(Boolean)
+  detail = parts.join(' · ')
   return (
     <Row
       avatar={avatar}

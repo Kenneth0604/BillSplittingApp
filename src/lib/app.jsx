@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { useLocation, useNavigate } from 'react-router-dom'
 import * as store from './store.js'
 import * as cloud from './cloud.js'
+import { todayISO } from './calc.js'
 import { useToast } from './toast.jsx'
 
 const AppCtx = createContext(null)
@@ -12,6 +13,8 @@ export function AppProvider({ children }) {
   const [version, setVersion] = useState(0)
   const [authUser, setAuthUser] = useState(cloud.authUser)
   const [admin, setAdmin] = useState(false)
+  // 記記頁選中的日期(ISO);列表依這天篩選,新增紀錄也記在這天
+  const [day, setDay] = useState(todayISO)
 
   // 頁面由 hash 路由決定(#/expenses、#/members、#/settle);對外仍提供 page / setPage 讓各 sheet 沿用
   const location = useLocation()
@@ -72,8 +75,10 @@ export function AppProvider({ children }) {
       isAdmin: admin || cloud.isAdmin(),
       cloudOn: cloud.cloudOn(),
       toast,
+      day,
+      setDay,
     }
-  }, [version, page, setPage, act, authUser, admin, toast])
+  }, [version, page, setPage, act, authUser, admin, toast, day])
 
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>
 }

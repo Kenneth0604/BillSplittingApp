@@ -1,10 +1,38 @@
 import { useApp } from '../lib/app.jsx'
-import { balances, fmt, ledgerStats } from '../lib/calc.js'
+import { balances, fmt, isoToMD, ledgerStats } from '../lib/calc.js'
 import { chatName } from '../lib/nick.js'
 import { Card, Empty, StatCard } from '../components/ui.jsx'
 import { ExpenseRow, LedgerRow } from '../components/ExpenseRows.jsx'
 import Chat from '../components/Chat.jsx'
 import { useSettleActions } from './Settle.jsx'
+import DayStrip from '../components/DayStrip.jsx'
+
+/** 日期區 + 選中那天的紀錄(含當日小計) */
+function DayList({ renderRow, emptyIcon }) {
+  const { p, day } = useApp()
+  const md = isoToMD(day)
+  const list = p.expenses.filter((e) => e.date === md)
+  let tin = 0, tout = 0
+  list.forEach((e) => {
+    if (e.settle) return
+    if (p.type !== 'split' && e.kind === 'in') tin += e.amount
+    else tout += e.amount
+  })
+  const sum = p.type === 'split' ? `支出 ${fmt(tout)}` : `收入 ${fmt(tin)} · 支出 ${fmt(tout)}`
+  return (
+    <>
+      <DayStrip />
+      {list.length === 0 ? (
+        <Empty icon={emptyIcon}>這天沒有紀錄<br />點右下角 ＋ 記在這天</Empty>
+      ) : (
+        <>
+          <p className="px-1 text-[13px] text-muted">這天 {list.length} 筆 · {sum}</p>
+          <Card>{[...list].reverse().map(renderRow)}</Card>
+        </>
+      )}
+    </>
+  )
+}
 
 export default function Expenses() {
   const { p, duo } = useApp()
@@ -22,11 +50,7 @@ function SplitList() {
   return (
     <>
       <StatCard label="總支出" big={fmt(total)} meta={`${p.members.length} 位成員 · ${p.expenses.length} 筆帳目`} />
-      {p.expenses.length === 0 ? (
-        <Empty icon="🧾">還沒有任何支出<br />點右下角 ＋ 新增第一筆</Empty>
-      ) : (
-        <Card>{[...p.expenses].reverse().map((e) => <ExpenseRow key={e.id} e={e} />)}</Card>
-      )}
+      <DayList emptyIcon="🧾" renderRow={(e) => <ExpenseRow key={e.id} e={e} />} />
     </>
   )
 }
@@ -58,11 +82,7 @@ function DuoSummary() {
           ✓ 標記已結清({debtor.name} 已付款)
         </button>
       )}
-      {p.expenses.length === 0 ? (
-        <Empty icon="🧾">還沒有任何支出<br />點右下角 ＋ 新增第一筆</Empty>
-      ) : (
-        <Card>{[...p.expenses].reverse().map((e) => <ExpenseRow key={e.id} e={e} />)}</Card>
-      )}
+      <DayList emptyIcon="🧾" renderRow={(e) => <ExpenseRow key={e.id} e={e} />} />
     </>
   )
 }
@@ -80,11 +100,7 @@ function LedgerList() {
         big={fmt(s.bal)}
         meta={`${isFund ? '總存入' : '總收入'} ${fmt(s.tin)} · 總支出 ${fmt(s.tout)}`}
       />
-      {p.expenses.length === 0 ? (
-        <Empty icon={isFund ? '🏦' : '📒'}>還沒有任何紀錄<br />點右下角 ＋ 新增第一筆</Empty>
-      ) : (
-        <Card>{[...p.expenses].reverse().map((e) => <LedgerRow key={e.id} e={e} isFund={isFund} />)}</Card>
-      )}
+      <DayList emptyIcon={isFund ? '🏦' : '📒'} renderRow={(e) => <LedgerRow key={e.id} e={e} isFund={isFund} />} />
     </>
   )
 }

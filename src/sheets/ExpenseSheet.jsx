@@ -18,7 +18,7 @@ import { BASE, CUR_BY_CODE, cachedRates, fmtCur, fmtRate, rateOf, toBase } from 
  * 編輯時鎖定分帳方式;隨機付款只能改金額、分類、說明、日期,不重抽。
  */
 export default function ExpenseSheet({ editId = null }) {
-  const { p, duo, act, toast, setPage } = useApp()
+  const { p, duo, act, toast, setPage, day } = useApp()
   const { close, setTitle } = useSheet()
   const { reveal } = useExpenseActions()
   const editing = editId != null ? p.expenses.find((x) => x.id === editId) : null
@@ -33,14 +33,14 @@ export default function ExpenseSheet({ editId = null }) {
   const [cat, setCat] = useState(() => editing?.cat ?? '')
   const [desc, setDesc] = useState(editing?.desc ?? '')
   const [note, setNote] = useState(editing?.note ?? '') // 備註(選填,可多行);舊紀錄沒有這個欄位
-  const [date, setDate] = useState(() => (editing ? dateToISO(editing.date) : todayISO()))
+  // 新增:記在記記頁選中的那天(不顯示日期欄);編輯:可改日期
+  const [date, setDate] = useState(() => (editing ? dateToISO(editing.date) : day || todayISO()))
   const [mode, setMode] = useState(lockedMode ?? 'exact')
   const [kind, setKind] = useState(editing?.kind === 'out' ? 'out' : 'in')
   // 多幣別:外幣時輸入的都是原幣,存檔才換算成 NT$;原幣金額另存在 fx
   const fx0 = editing?.fx
-  // 新增時沿用這個帳本上一筆新增用的幣別(出國記帳不用每筆重選),從沒選過就是新台幣;
-  // 編輯時用該筆紀錄自己的幣別
-  const [cur, setCur] = useState(() => fx0?.cur || (!editing && CUR_BY_CODE[p.lastCur] ? p.lastCur : BASE))
+  // 幣別欄已拿掉:新增一律新台幣;只有編輯舊的外幣紀錄時才顯示幣別欄
+  const [cur, setCur] = useState(() => fx0?.cur || BASE)
   const [rate, setRate] = useState(() => (fx0 ? String(fx0.rate) : cur !== BASE ? fmtRate(rateOf(cur, cachedRates())) : null))
   const foreign = cur !== BASE
   const [amount, setAmount] = useState(editing ? String(fx0 ? fx0.orig : editing.amount) : '')
@@ -227,10 +227,10 @@ export default function ExpenseSheet({ editId = null }) {
       <Chips options={cats} value={effectiveCat} onChange={setCat} />
     </Field>
   )
-  const DescField = <Field label="詳細說明(選填)"><input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="例如:鐵板燒" className="input" /></Field>
-  const NoteField = <Field label="備註(選填)"><textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} maxLength={500} placeholder="想補充的事,例如:含服務費、下次換我請" className="input" /></Field>
-  const DateField = <Field label="日期"><input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input" /></Field>
-  const CurField = <CurrencyField keepRate={Boolean(fx0)} cur={cur} rate={rate} preview={previewNT != null && Number.isFinite(previewNT) ? previewNT : null} onChange={(c, r) => { setCur(c); setRate(r) }} />
+  const DescField = <Field label="詳細說明(選填)"><input value={desc} onChange={(e) => setDesc(e.target.value)} className="input" /></Field>
+  const NoteField = <Field label="備註(選填)"><textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} maxLength={500} className="input" /></Field>
+  const DateField = editing ? <Field label="日期"><input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input" /></Field> : null
+  const CurField = !fx0 ? null : <CurrencyField keepRate={Boolean(fx0)} cur={cur} rate={rate} preview={previewNT != null && Number.isFinite(previewNT) ? previewNT : null} onChange={(c, r) => { setCur(c); setRate(r) }} />
   const PayerField = (label = '誰先付的?') => <Field label={label}><Select value={payer} onChange={setPayer} options={memberOpts} /></Field>
 
   // ---------- 雙人精簡 ----------

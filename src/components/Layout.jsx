@@ -7,7 +7,6 @@ import { pullAll, syncMyProjects } from '../lib/cloud.js'
 import { onAppUpdate } from '../lib/sw-register.js'
 import { chatName } from '../lib/nick.js'
 import ProjectSheet from '../sheets/ProjectSheet.jsx'
-import DateSheet from '../sheets/DateSheet.jsx'
 import AuthSheet from '../sheets/AuthSheet.jsx'
 import ExpenseSheet from '../sheets/ExpenseSheet.jsx'
 
@@ -88,9 +87,6 @@ export default function Layout() {
             <div className="flex shrink-0 items-center gap-1.5">
               <HeaderIcon onClick={refresh} title="重新整理" dim={refreshing}>
                 <svg {...svgProps}><path d="M4 12a8 8 0 1 1 3 6.24" /><path d="M4 18v-5h5" /></svg>
-              </HeaderIcon>
-              <HeaderIcon onClick={() => sheet.open('📅 查看特定日期', <DateSheet />)} title="依日期查看">
-                <svg {...svgProps}><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>
               </HeaderIcon>
               <button onClick={() => sheet.open(authUser ? '我的帳號' : '登入 / 設定', <AuthSheet />)} className="flex h-9 items-center gap-1.5 rounded-full bg-white/20 px-2.5 text-sm font-semibold active:bg-white/30" style={{ WebkitBackdropFilter: 'blur(10px)', backdropFilter: 'blur(10px)' }}>
                 {authUser?.avatar ? <img src={authUser.avatar} alt="" className="h-6 w-6 rounded-full object-cover" /> : <span aria-hidden>👤</span>}
