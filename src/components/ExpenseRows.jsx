@@ -37,7 +37,7 @@ export function useExpenseActions() {
 }
 
 /** 多人 / 雙人分帳的支出列 */
-export function ExpenseRow({ e }) {
+export function ExpenseRow({ e, showDate = false }) {
   const { reveal, edit, remove } = useExpenseActions()
   let avatarId, payText, splitText
   if (e.mode === 'random') {
@@ -62,7 +62,7 @@ export function ExpenseRow({ e }) {
       avatar={<Avatar member={memberById(avatarId)} />}
       title={e.desc || e.cat || '未命名支出'}
       note={e.note}
-      detail={`${e.desc && e.cat ? e.cat + ' · ' : ''}${payText} · ${splitText}${e.by ? ` · ${e.by} 記` : ''}`}
+      detail={`${e.desc && e.cat ? e.cat + ' · ' : ''}${payText} · ${splitText}${showDate ? ` · ${e.date}` : ''}${e.by ? ` · ${e.by} 記` : ''}`}
       amount={<WithFx e={e}>{fmt(e.amount)}</WithFx>}
       actions={
         <>
@@ -88,7 +88,7 @@ function WithFx({ e, children }) {
 }
 
 /** 基金 / 個人記帳的紀錄列 */
-export function LedgerRow({ e, isFund }) {
+export function LedgerRow({ e, isFund, showDate = false }) {
   const { edit, remove } = useExpenseActions()
   const isIn = e.kind === 'in'
   // 列表已依日期分組,不再重複顯示日期
@@ -99,7 +99,7 @@ export function LedgerRow({ e, isFund }) {
     avatar = <Avatar member={m} color={colorOf(e.payer)} text={initials(m?.name || '?')} />
     detail = `${m?.name || '?'} 存入`
   }
-  const parts = [e.desc && e.cat ? e.cat : '', detail, e.by ? `${e.by} 記` : ''].filter(Boolean)
+  const parts = [e.desc && e.cat ? e.cat : '', detail, showDate ? e.date : '', e.by ? `${e.by} 記` : ''].filter(Boolean)
   detail = parts.join(' · ')
   return (
     <Row

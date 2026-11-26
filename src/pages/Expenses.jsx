@@ -9,7 +9,27 @@ import DayStrip from '../components/DayStrip.jsx'
 
 /** 日期區 + 選中那天的紀錄(含當日小計) */
 function DayList({ renderRow, emptyIcon }) {
-  const { p, day } = useApp()
+  const { p, day, view, setView } = useApp()
+  const tabs = (
+    <div className="grid grid-cols-2 gap-1 rounded-full bg-surface-2 p-1">
+      {[['all', '全部'], ['day', '📅 依日期']].map(([v, label]) => (
+        <button key={v} type="button" onClick={() => setView(v)} className={`rounded-full py-1.5 text-sm font-semibold transition-colors duration-150 ${view === v ? 'bg-surface text-ink shadow-sm' : 'text-muted'}`}>{label}</button>
+      ))}
+    </div>
+  )
+  // 全部:原本的列表(新到舊,每列顯示日期)
+  if (view !== 'day') {
+    return (
+      <>
+        {tabs}
+        {p.expenses.length === 0 ? (
+          <Empty icon={emptyIcon}>還沒有任何紀錄<br />點右下角 ＋ 新增第一筆</Empty>
+        ) : (
+          <Card>{[...p.expenses].reverse().map((e) => renderRow(e, true))}</Card>
+        )}
+      </>
+    )
+  }
   const md = isoToMD(day)
   const list = p.expenses.filter((e) => e.date === md)
   let tin = 0, tout = 0
@@ -21,13 +41,14 @@ function DayList({ renderRow, emptyIcon }) {
   const sum = p.type === 'split' ? `支出 ${fmt(tout)}` : `收入 ${fmt(tin)} · 支出 ${fmt(tout)}`
   return (
     <>
+      {tabs}
       <DayStrip />
       {list.length === 0 ? (
         <Empty icon={emptyIcon}>這天沒有紀錄<br />點右下角 ＋ 記在這天</Empty>
       ) : (
         <>
           <p className="px-1 text-[13px] text-muted">這天 {list.length} 筆 · {sum}</p>
-          <Card>{[...list].reverse().map(renderRow)}</Card>
+          <Card>{[...list].reverse().map((e) => renderRow(e, false))}</Card>
         </>
       )}
     </>
@@ -50,7 +71,7 @@ function SplitList() {
   return (
     <>
       <StatCard label="總支出" big={fmt(total)} meta={`${p.members.length} 位成員 · ${p.expenses.length} 筆帳目`} />
-      <DayList emptyIcon="🧾" renderRow={(e) => <ExpenseRow key={e.id} e={e} />} />
+      <DayList emptyIcon="🧾" renderRow={(e, d) => <ExpenseRow key={e.id} e={e} showDate={d} />} />
     </>
   )
 }
@@ -82,7 +103,7 @@ function DuoSummary() {
           ✓ 標記已結清({debtor.name} 已付款)
         </button>
       )}
-      <DayList emptyIcon="🧾" renderRow={(e) => <ExpenseRow key={e.id} e={e} />} />
+      <DayList emptyIcon="🧾" renderRow={(e, d) => <ExpenseRow key={e.id} e={e} showDate={d} />} />
     </>
   )
 }
@@ -100,7 +121,7 @@ function LedgerList() {
         big={fmt(s.bal)}
         meta={`${isFund ? '總存入' : '總收入'} ${fmt(s.tin)} · 總支出 ${fmt(s.tout)}`}
       />
-      <DayList emptyIcon={isFund ? '🏦' : '📒'} renderRow={(e) => <LedgerRow key={e.id} e={e} isFund={isFund} />} />
+      <DayList emptyIcon={isFund ? '🏦' : '📒'} renderRow={(e, d) => <LedgerRow key={e.id} e={e} isFund={isFund} showDate={d} />} />
     </>
   )
 }

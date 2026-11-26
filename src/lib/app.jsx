@@ -15,6 +15,9 @@ export function AppProvider({ children }) {
   const [admin, setAdmin] = useState(false)
   // 記記頁選中的日期(ISO);列表依這天篩選,新增紀錄也記在這天
   const [day, setDay] = useState(todayISO)
+  // 記記頁的兩種頁面:'all' 全部紀錄(原本的)/ 'day' 依日期;記住上次選的
+  const [view, setViewState] = useState(() => { try { return localStorage.getItem('billsplit-view') === 'day' ? 'day' : 'all' } catch { return 'all' } })
+  const setView = useCallback((v) => { setViewState(v); try { localStorage.setItem('billsplit-view', v) } catch { /* 無痕模式 */ } }, [])
 
   // 頁面由 hash 路由決定(#/expenses、#/members、#/settle);對外仍提供 page / setPage 讓各 sheet 沿用
   const location = useLocation()
@@ -77,8 +80,10 @@ export function AppProvider({ children }) {
       toast,
       day,
       setDay,
+      view,
+      setView,
     }
-  }, [version, page, setPage, act, authUser, admin, toast, day])
+  }, [version, page, setPage, act, authUser, admin, toast, day, view, setView])
 
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>
 }

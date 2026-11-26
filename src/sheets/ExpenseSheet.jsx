@@ -18,7 +18,7 @@ import { BASE, CUR_BY_CODE, cachedRates, fmtCur, fmtRate, rateOf, toBase } from 
  * 編輯時鎖定分帳方式;隨機付款只能改金額、分類、說明、日期,不重抽。
  */
 export default function ExpenseSheet({ editId = null }) {
-  const { p, duo, act, toast, setPage, day } = useApp()
+  const { p, duo, act, toast, setPage, day, view } = useApp()
   const { close, setTitle } = useSheet()
   const { reveal } = useExpenseActions()
   const editing = editId != null ? p.expenses.find((x) => x.id === editId) : null
@@ -34,7 +34,7 @@ export default function ExpenseSheet({ editId = null }) {
   const [desc, setDesc] = useState(editing?.desc ?? '')
   const [note, setNote] = useState(editing?.note ?? '') // 備註(選填,可多行);舊紀錄沒有這個欄位
   // 新增:記在記記頁選中的那天(不顯示日期欄);編輯:可改日期
-  const [date, setDate] = useState(() => (editing ? dateToISO(editing.date) : day || todayISO()))
+  const [date, setDate] = useState(() => (editing ? dateToISO(editing.date) : view === 'day' ? day : todayISO()))
   const [mode, setMode] = useState(lockedMode ?? 'exact')
   const [kind, setKind] = useState(editing?.kind === 'out' ? 'out' : 'in')
   // 多幣別:外幣時輸入的都是原幣,存檔才換算成 NT$;原幣金額另存在 fx
@@ -228,8 +228,9 @@ export default function ExpenseSheet({ editId = null }) {
     </Field>
   )
   const DescField = <Field label="詳細說明(選填)"><input value={desc} onChange={(e) => setDesc(e.target.value)} className="input" /></Field>
-  const NoteField = <Field label="備註(選填)"><textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} maxLength={500} className="input" /></Field>
-  const DateField = editing ? <Field label="日期"><input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input" /></Field> : null
+  const NoteField = <Field label="備註(選填)"><input value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} className="input" /></Field>
+  // 依日期頁新增時日期就是選中那天,不顯示;全部頁與編輯時照舊可選日期
+  const DateField = editing || view !== 'day' ? <Field label="日期"><input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input" /></Field> : null
   const CurField = !fx0 ? null : <CurrencyField keepRate={Boolean(fx0)} cur={cur} rate={rate} preview={previewNT != null && Number.isFinite(previewNT) ? previewNT : null} onChange={(c, r) => { setCur(c); setRate(r) }} />
   const PayerField = (label = '誰先付的?') => <Field label={label}><Select value={payer} onChange={setPayer} options={memberOpts} /></Field>
 
