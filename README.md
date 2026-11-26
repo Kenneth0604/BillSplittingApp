@@ -81,7 +81,7 @@ legacy/                               舊版(單一 HTML + 原生 ES Modules)原
 { id, cat, desc, amount, kind:'in'|'out', payer, date }
 ```
 
-`date` 一律是 `M/D` 字串(不含年份),`by` 是新增者的顯示名稱。
+`date` 一律是 `M/D` 字串(不含年份),`by` 是新增者的顯示名稱。所有形態都可帶選填的 `note`(備註,可多行,最多 500 字);舊紀錄沒有這個欄位,沒填時不會存。
 
 ### 2.2 結算演算法(多人分帳)
 

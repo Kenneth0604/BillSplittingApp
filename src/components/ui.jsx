@@ -8,7 +8,7 @@ export function SectionTitle({ children, className = '' }) {
   return <h2 className={`section-title ${className}`}>{children}</h2>
 }
 
-export function Row({ avatar, title, detail, amount, amountClass = '', actions, onClick, className = '' }) {
+export function Row({ avatar, title, detail, note, amount, amountClass = '', actions, onClick, className = '' }) {
   return (
     <div
       onClick={onClick}
@@ -18,6 +18,7 @@ export function Row({ avatar, title, detail, amount, amountClass = '', actions, 
       <div className="min-w-0 flex-1">
         <div className="truncate text-[15px] font-semibold text-ink" style={{ letterSpacing: '-0.01em' }}>{title}</div>
         {detail && <div className="mt-0.5 truncate text-[13px] text-muted">{detail}</div>}
+        {note && <div className="mt-0.5 line-clamp-2 whitespace-pre-line break-words text-[13px] text-muted opacity-80">📝 {note}</div>}
       </div>
       {amount !== undefined && <div className={`shrink-0 text-right font-semibold tabular-nums text-[15px] text-ink ${amountClass}`}>{amount}</div>}
       {actions && <div className="flex shrink-0 items-center gap-1">{actions}</div>}

@@ -32,6 +32,7 @@ export default function ExpenseSheet({ editId = null }) {
 
   const [cat, setCat] = useState(() => editing?.cat ?? '')
   const [desc, setDesc] = useState(editing?.desc ?? '')
+  const [note, setNote] = useState(editing?.note ?? '') // 備註(選填,可多行);舊紀錄沒有這個欄位
   const [date, setDate] = useState(() => (editing ? dateToISO(editing.date) : todayISO()))
   const [mode, setMode] = useState(lockedMode ?? 'exact')
   const [kind, setKind] = useState(editing?.kind === 'out' ? 'out' : 'in')
@@ -144,7 +145,8 @@ export default function ExpenseSheet({ editId = null }) {
 
   function submit(e) {
     e?.preventDefault()
-    const common = { cat: effectiveCat, desc: desc.trim(), date: dateMD() }
+    // 備註清空時存 undefined,編輯合併後 JSON 會把欄位拿掉
+    const common = { cat: effectiveCat, desc: desc.trim(), note: note.trim() || undefined, date: dateMD() }
     if (foreign && !(rateNum > 0)) return toast.error('請輸入有效匯率')
     const origAmt = evalAmt(amount)
     if (inv) common.inv = inv
@@ -226,6 +228,7 @@ export default function ExpenseSheet({ editId = null }) {
     </Field>
   )
   const DescField = <Field label="詳細說明(選填)"><input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="例如:鐵板燒" className="input" /></Field>
+  const NoteField = <Field label="備註(選填)"><textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} maxLength={500} placeholder="想補充的事,例如:含服務費、下次換我請" className="input" /></Field>
   const DateField = <Field label="日期"><input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input" /></Field>
   const CurField = <CurrencyField keepRate={Boolean(fx0)} cur={cur} rate={rate} preview={previewNT != null && Number.isFinite(previewNT) ? previewNT : null} onChange={(c, r) => { setCur(c); setRate(r) }} />
   const PayerField = (label = '誰先付的?') => <Field label={label}><Select value={payer} onChange={setPayer} options={memberOpts} /></Field>
@@ -237,6 +240,7 @@ export default function ExpenseSheet({ editId = null }) {
         {CatField}{DescField}{DateField}{PayerField()}
         {CurField}
         <Field label={amtLabel('= 對方欠的錢')}><AmountInput value={amount} onChange={setAmount} /></Field>
+        {NoteField}
         <button type="submit" className="btn-primary w-full">{editing ? '更新' : '記一筆'}</button>
       </form>
     )
@@ -257,6 +261,7 @@ export default function ExpenseSheet({ editId = null }) {
         {CatField}{DescField}{DateField}
         {CurField}
         <Field label={amtLabel()}><AmountInput value={amount} onChange={setAmount} /></Field>
+        {NoteField}
         <button type="submit" className="btn-primary w-full">{editing ? '更新' : '記一筆'}</button>
       </form>
     )
@@ -343,6 +348,7 @@ export default function ExpenseSheet({ editId = null }) {
         </>
       ))}
 
+      {NoteField}
       <button type="submit" className="btn-primary w-full">{editing ? '更新' : '記一筆'}</button>
     </form>
   )

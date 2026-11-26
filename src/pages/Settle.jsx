@@ -101,6 +101,7 @@ function SplitSettle() {
                 avatar={<Avatar color="var(--t-warning)" text="🎲" />}
                 title={e.desc || e.cat || '神秘支出'}
                 detail={`${memberById(e.payer)?.name || '?'} 先付 · ${e.date}`}
+                note={e.note}
                 amount={fmt(e.amount)}
                 actions={<button onClick={() => reveal(e.id)} className="chip py-1 text-xs font-bold text-warning">開獎</button>}
               />

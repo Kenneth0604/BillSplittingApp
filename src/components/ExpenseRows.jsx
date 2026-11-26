@@ -61,6 +61,7 @@ export function ExpenseRow({ e }) {
     <Row
       avatar={<Avatar member={memberById(avatarId)} />}
       title={e.desc || e.cat || '未命名支出'}
+      note={e.note}
       detail={`${e.desc && e.cat ? e.cat + ' · ' : ''}${payText} · ${splitText} · ${e.date}${e.by ? ` · ${e.by} 記` : ''}`}
       amount={<WithFx e={e}>{fmt(e.amount)}</WithFx>}
       actions={
@@ -104,6 +105,7 @@ export function LedgerRow({ e, isFund }) {
       avatar={avatar}
       title={e.desc || e.cat || (isIn ? '收入' : '支出')}
       detail={detail}
+      note={e.note}
       amount={<WithFx e={e}>{`${isIn ? '+' : '−'}${fmt(e.amount)}`}</WithFx>}
       amountClass={isIn ? 'amount-pos' : 'amount-neg'}
       actions={
