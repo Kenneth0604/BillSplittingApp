@@ -228,7 +228,8 @@ export default function ExpenseSheet({ editId = null }) {
     </Field>
   )
   const DescField = <Field label="詳細說明(選填)"><input value={desc} onChange={(e) => setDesc(e.target.value)} className="input" /></Field>
-  const NoteField = <Field label="備註(選填)"><input value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} className="input" /></Field>
+  // 備註放在「記一筆」按鈕下面
+  const NoteField = <div className="mt-5"><Field label="備註(選填)"><input value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} className="input" /></Field></div>
   // 依日期頁新增時日期就是選中那天,不顯示;全部頁與編輯時照舊可選日期
   const DateField = editing || view !== 'day' ? <Field label="日期"><input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input" /></Field> : null
   const CurField = !fx0 ? null : <CurrencyField keepRate={Boolean(fx0)} cur={cur} rate={rate} preview={previewNT != null && Number.isFinite(previewNT) ? previewNT : null} onChange={(c, r) => { setCur(c); setRate(r) }} />
@@ -241,8 +242,8 @@ export default function ExpenseSheet({ editId = null }) {
         {CatField}{DescField}{DateField}{PayerField()}
         {CurField}
         <Field label={amtLabel('= 對方欠的錢')}><AmountInput value={amount} onChange={setAmount} /></Field>
-        {NoteField}
         <button type="submit" className="btn-primary w-full">{editing ? '更新' : '記一筆'}</button>
+        {NoteField}
       </form>
     )
   }
@@ -262,8 +263,8 @@ export default function ExpenseSheet({ editId = null }) {
         {CatField}{DescField}{DateField}
         {CurField}
         <Field label={amtLabel()}><AmountInput value={amount} onChange={setAmount} /></Field>
-        {NoteField}
         <button type="submit" className="btn-primary w-full">{editing ? '更新' : '記一筆'}</button>
+        {NoteField}
       </form>
     )
   }
@@ -349,8 +350,8 @@ export default function ExpenseSheet({ editId = null }) {
         </>
       ))}
 
-      {NoteField}
       <button type="submit" className="btn-primary w-full">{editing ? '更新' : '記一筆'}</button>
+      {NoteField}
     </form>
   )
 }
