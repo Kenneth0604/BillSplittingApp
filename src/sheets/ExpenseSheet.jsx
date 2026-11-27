@@ -229,15 +229,17 @@ export default function ExpenseSheet({ editId = null }) {
   )
   const DescField = <Field label="詳細說明(選填)"><input value={desc} onChange={(e) => setDesc(e.target.value)} className="input" /></Field>
   // 備註放在「記一筆」按鈕下面
-  // 底部固定區:「記一筆」+ 下面的備註;內容再長也不會被切掉,上面的欄位自己捲動
+  // 「記一筆」黏在底部(內容再長也看得到);備註在按鈕下面跟著內容正常捲動,不固定
   const Footer = (
-    <div className="sticky bottom-0 z-10 -mx-5 px-5 pt-3" style={{ background: 'var(--t-bg)', boxShadow: '0 -10px 12px -10px rgba(0,0,0,0.12)' }}>
-      <button type="submit" className="btn-primary w-full">{editing ? '更新' : '記一筆'}</button>
-      <label className="mt-3 block">
+    <>
+      <div className="sticky bottom-0 z-10 -mx-5 px-5 py-3" style={{ background: 'var(--t-bg)' }}>
+        <button type="submit" className="btn-primary w-full">{editing ? '更新' : '記一筆'}</button>
+      </div>
+      <label className="mt-2 block">
         <span className="label">備註(選填)</span>
         <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} className="input" />
       </label>
-    </div>
+    </>
   )
   // 依日期頁新增時日期就是選中那天,不顯示;全部頁與編輯時照舊可選日期
   const DateField = editing || view !== 'day' ? <Field label="日期"><input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input" /></Field> : null
