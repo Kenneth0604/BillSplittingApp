@@ -180,7 +180,7 @@ function SheetView({ title, closing, onClose, onClosed, onCancelClose, children 
       />
       <div
         ref={sheetRef}
-        className="pb-safe absolute inset-x-0 bottom-0 mx-auto flex max-h-[88%] max-w-md flex-col rounded-t-3xl"
+        className="pb-safe absolute inset-x-0 bottom-0 mx-auto flex max-h-[92%] max-w-md flex-col rounded-t-3xl"
         style={{
           background: 'var(--t-bg)',
           transform: reduced.current ? 'none' : 'translate3d(0, 100%, 0)',

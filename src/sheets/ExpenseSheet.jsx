@@ -232,7 +232,7 @@ export default function ExpenseSheet({ editId = null }) {
   // 「記一筆」黏在底部(內容再長也看得到);備註在按鈕下面跟著內容正常捲動,不固定
   const Footer = (
     <>
-      <div className="sticky bottom-0 z-10 -mx-5 px-5 py-3" style={{ background: 'var(--t-bg)' }}>
+      <div className="sticky bottom-0 z-10 -mx-5 px-5 py-2" style={{ background: 'var(--t-bg)' }}>
         <button type="submit" className="btn-primary w-full">{editing ? '更新' : '記一筆'}</button>
       </div>
       <label className="mt-2 block">
@@ -249,8 +249,9 @@ export default function ExpenseSheet({ editId = null }) {
   // ---------- 雙人精簡 ----------
   if (duoSimple) {
     return (
-      <form onSubmit={submit}>
-        {CatField}{DescField}{DateField}{PayerField()}
+      <form onSubmit={submit} className="form-compact">
+        {CatField}{DescField}
+        <div className={DateField ? 'grid grid-cols-2 gap-3' : ''}>{DateField}{PayerField()}</div>
         {CurField}
         <Field label={amtLabel('= 對方欠的錢')}><AmountInput value={amount} onChange={setAmount} /></Field>
         {Footer}
@@ -261,7 +262,7 @@ export default function ExpenseSheet({ editId = null }) {
   // ---------- 基金 / 個人 ----------
   if (!isSplit) {
     return (
-      <form onSubmit={submit}>
+      <form onSubmit={submit} className="form-compact">
         <Field label="類型">
           <Chips
             options={[{ value: 'in', label: isFund ? '存入' : '收入', tone: 'success' }, { value: 'out', label: '支出' }]}
@@ -284,7 +285,7 @@ export default function ExpenseSheet({ editId = null }) {
   const sumCls = sumOk ? 'text-success' : tp || ts ? 'text-danger' : 'text-muted'
 
   return (
-    <form onSubmit={submit}>
+    <form onSubmit={submit} className="form-compact">
       {CatField}{DescField}{DateField}
       {!editing && (
         <Field label="分帳方式">

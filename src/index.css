@@ -204,6 +204,14 @@ img { max-width: 100%; }
   input[type="date"].input { @apply block min-h-11 appearance-none; -webkit-appearance: none; }
   input[type="date"].input::-webkit-date-and-time-value { text-align: left; }
 
+  /* 新增 / 編輯紀錄表單:縮小間距,一打開就看得到全部欄位與「記一筆」 */
+  .form-compact .mb-5 { margin-bottom: 0.75rem; }
+  .form-compact .label { margin-bottom: 0.25rem; }
+  .form-compact .input { padding-top: 0.5rem; padding-bottom: 0.5rem; font-size: 16px; }
+  .form-compact input[type="date"].input { min-height: 2.5rem; }
+  .form-compact .chip { padding: 0.25rem 0.625rem; font-size: 13px; }
+  .form-compact .flex-wrap.gap-2 { gap: 0.375rem; }
+
   .label {
     @apply mb-1.5 block text-[13px] font-semibold tracking-tight text-ink;
     letter-spacing: -0.01em;
